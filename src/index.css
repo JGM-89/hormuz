@@ -1,0 +1,105 @@
+@import "tailwindcss";
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  font-family:
+    "Inter",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  background: #020617;
+  color: #e2e8f0;
+}
+
+/* MapLibre overrides */
+.maplibregl-popup-content {
+  background: #1e293b !important;
+  border: 1px solid #334155 !important;
+  border-radius: 8px !important;
+  padding: 8px 10px !important;
+  box-shadow:
+    0 10px 25px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(6, 182, 212, 0.1) !important;
+}
+
+.maplibregl-popup-tip {
+  border-top-color: #1e293b !important;
+}
+
+.maplibregl-ctrl-group {
+  background: #1e293b !important;
+  border: 1px solid #334155 !important;
+  border-radius: 8px !important;
+}
+
+.maplibregl-ctrl-group button {
+  border-bottom: 1px solid #334155 !important;
+}
+
+.maplibregl-ctrl-group button + button {
+  border-top: none !important;
+}
+
+.maplibregl-ctrl button .maplibregl-ctrl-icon {
+  filter: invert(1) brightness(0.8);
+}
+
+.maplibregl-ctrl-scale {
+  background: rgba(15, 23, 42, 0.8) !important;
+  border-color: #475569 !important;
+  color: #94a3b8 !important;
+  font-size: 10px !important;
+  border-radius: 4px !important;
+  padding: 1px 5px !important;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Animations */
+@keyframes slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.25s ease-out;
+}
+
+/* Recharts overrides */
+.recharts-default-tooltip {
+  border-radius: 6px !important;
+}

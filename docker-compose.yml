@@ -1,0 +1,21 @@
+services:
+  hormuz:
+    build: .
+    container_name: hormuz-tracker
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    volumes:
+      - hormuz-data:/app/data
+    environment:
+      - AISSTREAM_API_KEY=${AISSTREAM_API_KEY}
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      - GITHUB_REPO=${GITHUB_REPO:-}
+      - GITHUB_DATA_BRANCH=${GITHUB_DATA_BRANCH:-data}
+      - DB_PATH=/app/data/hormuz.db
+      - PORT=3001
+    # Only needs outbound network access — no inbound ports exposed to internet
+    # The 3001 port is only accessible on your local network
+
+volumes:
+  hormuz-data:
