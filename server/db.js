@@ -39,6 +39,7 @@ db.exec(`
     name TEXT,
     direction TEXT NOT NULL,
     speed REAL,
+    flag TEXT,
     timestamp INTEGER NOT NULL
   );
 
@@ -67,8 +68,8 @@ const insertPosition = db.prepare(`
 `);
 
 const insertTransit = db.prepare(`
-  INSERT INTO transits (mmsi, name, direction, speed, timestamp)
-  VALUES (?, ?, ?, ?, ?)
+  INSERT INTO transits (mmsi, name, direction, speed, flag, timestamp)
+  VALUES (?, ?, ?, ?, ?, ?)
 `);
 
 const upsertHourlyStat = db.prepare(`
@@ -107,7 +108,7 @@ export function flushPositions() {
 }
 
 export function recordTransit(transit) {
-  insertTransit.run(transit.mmsi, transit.name, transit.direction, transit.speed, transit.timestamp);
+  insertTransit.run(transit.mmsi, transit.name, transit.direction, transit.speed, transit.flag || '', transit.timestamp);
 }
 
 export function updateHourlyStats(stats, eastbound, westbound, msgCount) {

@@ -61,7 +61,7 @@ async function pushFile(path, content) {
   return result;
 }
 
-export async function pushSnapshot(vessels, stats, transitHistory, historicalData) {
+export async function pushSnapshot(vessels, stats, transitHistory, historicalData, aisHealth = null) {
   if (!GITHUB_TOKEN || !GITHUB_REPO) {
     return; // silently skip if not configured
   }
@@ -73,6 +73,7 @@ export async function pushSnapshot(vessels, stats, transitHistory, historicalDat
       vessels: Object.fromEntries(vessels),
       stats,
       recentTransits: transitHistory.slice(-50),
+      aisHealth,
     });
 
     // Historical data (updates every 15s too, but content changes slowly)

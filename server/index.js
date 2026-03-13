@@ -30,6 +30,36 @@ let hourlyMsgCount = 0;
 let hourlyEastbound = 0;
 let hourlyWestbound = 0;
 
+// AIS connection health tracking
+let aisConnectedSince = null;
+let lastAisMessage = 0;
+let aisReconnects = 0;
+
+function getAisHealth() {
+  const now = Date.now();
+  const timeSinceLastMsg = lastAisMessage ? now - lastAisMessage : null;
+  const connected = aisConnectedSince !== null;
+  const connectedFor = connected ? now - aisConnectedSince : 0;
+
+  // Consider AIS "down" if connected for >60s but no messages received
+  const receiving = connected && lastAisMessage > 0 && timeSinceLastMsg < 120_000;
+  const possibleOutage = connected && connectedFor > 60_000 && !receiving;
+
+  let status = 'connecting';
+  if (receiving) status = 'live';
+  else if (possibleOutage) status = 'outage';
+  else if (connected) status = 'waiting';
+
+  return {
+    status,
+    connected,
+    lastMessage: lastAisMessage || null,
+    timeSinceLastMsg,
+    reconnects: aisReconnects,
+    serverUptime: Math.round(process.uptime()),
+  };
+}
+
 const TANKER_TYPES = {
   80: 'Tanker', 81: 'Tanker (Hazmat A)', 82: 'Tanker (Hazmat B)',
   83: 'Tanker (Hazmat C)', 84: 'Tanker (Hazmat D)', 85: 'Tanker',
@@ -156,34 +186,60 @@ function connectToAISStream() {
 
   aisSocket.on('open', () => {
     console.log('Connected to AISStream.io');
+    aisConnectedSince = Date.now();
     aisSocket.send(JSON.stringify({
       APIKey: API_KEY,
       BoundingBoxes: [HORMUZ_BBOX],
-      FilterMessageTypes: ['PositionReport'],
+      FilterMessageTypes: ['PositionReport', 'ShipStaticData'],
     }));
     console.log('Subscribed to Strait of Hormuz bounding box');
   });
 
+  let msgTotal = 0;
   aisSocket.on('message', (data) => {
-    try { handleAISMessage(JSON.parse(data.toString())); } catch { /* skip */ }
+    try {
+      const parsed = JSON.parse(data.toString());
+      lastAisMessage = Date.now();
+      msgTotal++;
+      if (msgTotal <= 3 || msgTotal % 100 === 0) {
+        console.log(`[AIS] msg #${msgTotal} type=${parsed.MessageType} ship=${parsed.MetaData?.ShipName || '?'} shipType=${parsed.MetaData?.ShipType ?? '?'}`);
+      }
+      handleAISMessage(parsed);
+    } catch { /* skip */ }
   });
 
   aisSocket.on('error', (err) => console.error('AISStream error:', err.message));
 
   aisSocket.on('close', () => {
     console.log('AISStream disconnected, reconnecting in 5s...');
+    aisConnectedSince = null;
+    aisReconnects++;
     reconnectTimer = setTimeout(connectToAISStream, 5000);
   });
 }
 
+// Track known ship types from static data messages
+const knownShipTypes = new Map();
+
 function handleAISMessage(msg) {
+  // Store ship type from static data messages
+  if (msg.MessageType === 'ShipStaticData') {
+    const meta = msg.MetaData;
+    const staticData = msg.Message?.ShipStaticData;
+    if (meta?.MMSI) {
+      const type = staticData?.Type ?? meta.ShipType ?? 0;
+      knownShipTypes.set(String(meta.MMSI), type);
+    }
+    return;
+  }
+
   if (msg.MessageType !== 'PositionReport') return;
 
   const meta = msg.MetaData;
   const pos = msg.Message?.PositionReport;
   if (!meta || !pos) return;
 
-  const shipType = meta.ShipType ?? pos.Type ?? 0;
+  const shipType = meta.ShipType ?? knownShipTypes.get(String(meta.MMSI)) ?? pos.Type ?? 0;
   const name = (meta.ShipName || '').trim();
   const isTankerByType = isTanker(shipType);
   const isTankerByName = /tanker|crude|oil|petrol|lng|lpg|vlcc|ulcc|suezmax|aframax/i.test(name);
@@ -270,7 +326,7 @@ setInterval(async () => {
     topVessels: getTopVessels(30),
     dbStats: getDbStats(),
   };
-  await pushSnapshot(vessels, getStats(), transitHistory, historicalData);
+  await pushSnapshot(vessels, getStats(), transitHistory, historicalData, getAisHealth());
 }, 15_000);
 
 // Broadcast stats every 10s

@@ -1,6 +1,39 @@
 import { useStore } from '../store';
 import { getCongestionLevel } from '../utils/geo';
 
+function AisStatus() {
+  const aisHealth = useStore((s) => s.aisHealth);
+  if (!aisHealth) return null;
+
+  const statusConfig = {
+    live: { color: 'bg-emerald-400', text: 'AIS Live', textColor: 'text-emerald-400' },
+    outage: { color: 'bg-red-500', text: 'AIS Outage', textColor: 'text-red-400' },
+    waiting: { color: 'bg-amber-400', text: 'AIS Waiting', textColor: 'text-amber-400' },
+    connecting: { color: 'bg-amber-400', text: 'AIS Connecting', textColor: 'text-amber-400' },
+  };
+
+  const cfg = statusConfig[aisHealth.status];
+  const ago = aisHealth.lastMessage
+    ? Math.round((Date.now() - aisHealth.lastMessage) / 1000)
+    : null;
+
+  return (
+    <div className="flex items-center gap-2" title={
+      ago !== null
+        ? `Last AIS message: ${ago}s ago | Reconnects: ${aisHealth.reconnects} | Server uptime: ${aisHealth.serverUptime}s`
+        : `No AIS messages received | Reconnects: ${aisHealth.reconnects}`
+    }>
+      <div className={`w-2 h-2 rounded-full ${cfg.color} ${aisHealth.status === 'live' ? 'animate-pulse' : ''}`} />
+      <span className={`text-xs font-medium ${cfg.textColor}`}>{cfg.text}</span>
+      {aisHealth.status === 'outage' && (
+        <span className="text-[10px] text-red-400/70">
+          (no data {ago !== null ? `${ago > 60 ? Math.round(ago / 60) + 'm' : ago + 's'}` : ''})
+        </span>
+      )}
+    </div>
+  );
+}
+
 export default function StatsBar() {
   const stats = useStore((s) => s.stats);
   const connected = useStore((s) => s.connected);
@@ -19,6 +52,8 @@ export default function StatsBar() {
           {connected ? 'Live' : 'Disconnected'}
         </span>
       </div>
+
+      <AisStatus />
 
       <div className="h-4 w-px bg-slate-700" />
 
