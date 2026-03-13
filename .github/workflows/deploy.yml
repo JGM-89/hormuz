@@ -26,7 +26,7 @@ jobs:
 
       - run: npm ci
 
-      - run: npm run build
+      - run: npx vite build --base /hormuz/
         env:
           VITE_GITHUB_RAW_BASE: https://raw.githubusercontent.com/JGM-89/hormuz/data
 
