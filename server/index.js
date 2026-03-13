@@ -317,7 +317,7 @@ setInterval(() => {
   hourlyMsgCount = 0;
 }, 300_000);
 
-// Push to GitHub every 15s
+// Push to GitHub every 60s
 setInterval(async () => {
   if (!isGitHubConfigured()) return;
   const historicalData = {
@@ -327,7 +327,7 @@ setInterval(async () => {
     dbStats: getDbStats(),
   };
   await pushSnapshot(vessels, getStats(), transitHistory, historicalData, getAisHealth());
-}, 15_000);
+}, 60_000);
 
 // Broadcast stats every 10s
 setInterval(() => {

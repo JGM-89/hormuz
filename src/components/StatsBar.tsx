@@ -1,9 +1,20 @@
 import { useStore } from '../store';
 import { getCongestionLevel } from '../utils/geo';
 
-function AisStatus() {
+function AisStatusOrConnection({ connected }: { connected: boolean }) {
   const aisHealth = useStore((s) => s.aisHealth);
-  if (!aisHealth) return null;
+
+  // No health data yet — show simple connection status
+  if (!aisHealth) {
+    return (
+      <div className="flex items-center gap-2">
+        <div className={`w-2 h-2 rounded-full ${connected ? 'bg-emerald-400 animate-pulse' : 'bg-red-500'}`} />
+        <span className="text-xs text-slate-400 uppercase tracking-wider font-medium">
+          {connected ? 'Connected' : 'Disconnected'}
+        </span>
+      </div>
+    );
+  }
 
   const statusConfig = {
     live: { color: 'bg-emerald-400', text: 'AIS Live', textColor: 'text-emerald-400' },
@@ -44,16 +55,7 @@ export default function StatsBar() {
 
   return (
     <div className="flex items-center gap-6 px-6 py-3 bg-slate-900/80 border-b border-slate-700/50 backdrop-blur-sm">
-      <div className="flex items-center gap-2">
-        <div
-          className={`w-2 h-2 rounded-full ${connected ? 'bg-emerald-400 animate-pulse' : 'bg-red-500'}`}
-        />
-        <span className="text-xs text-slate-400 uppercase tracking-wider font-medium">
-          {connected ? 'Live' : 'Disconnected'}
-        </span>
-      </div>
-
-      <AisStatus />
+      <AisStatusOrConnection connected={connected} />
 
       <div className="h-4 w-px bg-slate-700" />
 

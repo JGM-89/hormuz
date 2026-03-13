@@ -177,7 +177,7 @@ export function connectDataSource() {
     connectWebSocketMode();
   } else if (mode === 'github') {
     pollGitHub();
-    pollInterval = setInterval(pollGitHub, 15_000);
+    pollInterval = setInterval(pollGitHub, 60_000);
   } else {
     pollAPI();
     pollInterval = setInterval(pollAPI, 5_000);
