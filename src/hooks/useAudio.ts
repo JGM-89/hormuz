@@ -95,7 +95,7 @@ function createOceanLayer(ctx: AudioContext, masterGain: GainNode): AmbientLayer
   hp.Q.value = 0.3;
 
   const oceanGain = ctx.createGain();
-  oceanGain.gain.value = 0.15;
+  oceanGain.gain.value = 0.03;
 
   bed.connect(hp);
   hp.connect(lp);
@@ -115,7 +115,7 @@ function createOceanLayer(ctx: AudioContext, masterGain: GainNode): AmbientLayer
   staticBp.Q.value = 0.5;
 
   const staticGain = ctx.createGain();
-  staticGain.gain.value = 0.018; // very quiet background hiss
+  staticGain.gain.value = 0.004; // very quiet background hiss
 
   staticNoise.connect(staticBp);
   staticBp.connect(staticGain);
@@ -149,7 +149,7 @@ function createSonarLayer(ctx: AudioContext, masterGain: GainNode): AmbientLayer
 
       const gain = ctx.createGain();
       gain.gain.setValueAtTime(0.001, t);
-      gain.gain.exponentialRampToValueAtTime(0.07, t + 0.008);
+      gain.gain.exponentialRampToValueAtTime(0.014, t + 0.008);
       gain.gain.exponentialRampToValueAtTime(0.001, t + 1.4);
 
       osc.connect(gain);
@@ -191,6 +191,8 @@ function createWhiteNoiseBuffer(ctx: AudioContext, durationSec: number): AudioBu
 // Streams are ordered by preference — European maritime first, US as fallback.
 // Every 5 minutes, retries preferred streams so we don't get stuck on a fallback.
 const MARINE_STREAMS = [
+  'https://broadcastify.cdnstream1.com/44085', // NW Ireland — VHF CH 16, 1, 2, 5 (UK/Irish Sea)
+  'https://broadcastify.cdnstream1.com/40213', // Vlissingen — KNRM Coastguard, North Sea entrance
   'https://broadcastify.cdnstream1.com/20660', // Eems/Dollard — Netherlands Coastguard
   'https://broadcastify.cdnstream1.com/12874', // Terheijde — Dutch marine VHF
   'https://broadcastify.cdnstream1.com/35475', // VHF CH 16, 67, 61
