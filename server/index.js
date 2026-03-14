@@ -479,6 +479,10 @@ server.listen(PORT, () => {
   console.log(`Config: bbox=${JSON.stringify(BOUNDING_BOX)} stale=${STALE_MINUTES}m trail=${MAX_TRAIL_POINTS}pts push=${PUSH_INTERVAL_MS}ms transit_lon=${TRANSIT_LONGITUDE}`);
   console.log(`GitHub push: ${isGitHubConfigured() ? `enabled (every ${PUSH_INTERVAL_MS / 1000}s)` : 'disabled (set GITHUB_TOKEN + GITHUB_REPO)'}`);
   connectToAISStream();
+  // Pre-fetch commodity prices so they're cached before the first GitHub push
+  fetchAllCommodities()
+    .then(data => console.log(`[Commodities] Initial fetch: ${data.length} commodities loaded`))
+    .catch(err => console.warn(`[Commodities] Initial fetch failed: ${err.message}`));
 });
 
 process.on('SIGINT', () => {
