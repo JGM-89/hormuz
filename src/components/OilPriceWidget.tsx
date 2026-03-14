@@ -49,7 +49,7 @@ export default function OilPriceWidget() {
   const isUp = oilPrice.change >= 0;
 
   return (
-    <div className="absolute top-16 right-4 z-10 bg-slate-900/80 backdrop-blur-md rounded-lg border border-slate-700/50 p-2.5 shadow-xl">
+    <div className="bg-slate-900/80 backdrop-blur-md rounded-lg border border-slate-700/50 p-2.5 shadow-xl">
       <div className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">
         Brent Crude
       </div>

@@ -17,7 +17,7 @@ export default function FloatingStats() {
   const status = aisHealth ? statusConfig[aisHealth.status] : null;
 
   return (
-    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-4 bg-slate-900/80 backdrop-blur-md rounded-full px-5 py-2 border border-slate-700/50 shadow-xl">
+    <div className="flex items-center gap-4 bg-slate-900/80 backdrop-blur-md rounded-full px-5 py-2 border border-slate-700/50 shadow-xl">
       {/* AIS Status */}
       {status ? (
         <div className="flex items-center gap-1.5" title={

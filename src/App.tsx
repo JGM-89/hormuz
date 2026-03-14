@@ -25,29 +25,63 @@ export default function App() {
       {/* Map fills entire viewport */}
       <Map />
 
-      {/* Floating UI */}
-      <LogoPill />
-      <FloatingStats />
-      <VesselDrawer />
-      <VesselPanel />
-      <ChokePointOverlay />
-      <OutageOverlay />
-      <WeatherWidget />
-      <OilPriceWidget />
-      <NewsTicker />
+      {/*
+        Layout overlay: flexbox zones replace individual absolute positioning.
+        pointer-events-none lets clicks pass through to the map;
+        each zone re-enables pointer-events for its interactive children.
+      */}
+      <div className="absolute inset-0 z-10 pointer-events-none flex flex-col">
+        {/* === TOP ROW: logo | stats+outage | oil price === */}
+        <div className="flex items-start justify-between p-4 gap-4 flex-shrink-0">
+          <div className="pointer-events-auto flex-shrink-0">
+            <LogoPill />
+          </div>
+          <div className="pointer-events-auto flex flex-col items-center gap-2 min-w-0">
+            <FloatingStats />
+            <OutageOverlay />
+          </div>
+          <div className="pointer-events-auto flex-shrink-0">
+            <OilPriceWidget />
+          </div>
+        </div>
 
-      {/* Analytics toggle button */}
-      <button
-        onClick={() => setAnalyticsOpen(true)}
-        className="absolute bottom-10 right-4 z-20 bg-slate-900/80 backdrop-blur-md border border-slate-700/50 rounded-lg p-2.5 shadow-xl hover:bg-slate-800/80 transition-colors group"
-        title="Open Analytics"
-      >
-        <svg width="18" height="18" viewBox="0 0 16 16" fill="none" className="text-slate-400 group-hover:text-cyan-400 transition-colors">
-          <rect x="1" y="8" width="3" height="7" rx="0.5" fill="currentColor" opacity="0.6" />
-          <rect x="5.5" y="5" width="3" height="10" rx="0.5" fill="currentColor" opacity="0.8" />
-          <rect x="10" y="1" width="3" height="14" rx="0.5" fill="currentColor" />
-        </svg>
-      </button>
+        {/* === MIDDLE: vessel drawer tab (left-aligned) === */}
+        <div className="flex-1 min-h-0 flex items-start px-4">
+          <div className="pointer-events-auto">
+            <VesselDrawer />
+          </div>
+        </div>
+
+        {/* === BOTTOM ROW: chokepoint | spacer | weather+analytics === */}
+        <div className="flex items-end justify-between p-4 gap-4 flex-shrink-0">
+          <div className="pointer-events-auto flex-shrink-0 max-w-[260px]">
+            <ChokePointOverlay />
+          </div>
+          <div className="flex-1" />
+          <div className="pointer-events-auto flex-shrink-0 flex items-end gap-2">
+            <WeatherWidget />
+            <button
+              onClick={() => setAnalyticsOpen(true)}
+              className="bg-slate-900/80 backdrop-blur-md border border-slate-700/50 rounded-lg p-2.5 shadow-xl hover:bg-slate-800/80 transition-colors group"
+              title="Open Analytics"
+            >
+              <svg width="18" height="18" viewBox="0 0 16 16" fill="none" className="text-slate-400 group-hover:text-cyan-400 transition-colors">
+                <rect x="1" y="8" width="3" height="7" rx="0.5" fill="currentColor" opacity="0.6" />
+                <rect x="5.5" y="5" width="3" height="10" rx="0.5" fill="currentColor" opacity="0.8" />
+                <rect x="10" y="1" width="3" height="14" rx="0.5" fill="currentColor" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* === BOTTOM TICKER: always flush bottom === */}
+        <div className="pointer-events-auto flex-shrink-0">
+          <NewsTicker />
+        </div>
+      </div>
+
+      {/* Full-height sidebars stay absolute z-20 (they overlay everything) */}
+      <VesselPanel />
 
       {/* Analytics full-screen overlay */}
       <AnalyticsModal open={analyticsOpen} onClose={() => setAnalyticsOpen(false)} />

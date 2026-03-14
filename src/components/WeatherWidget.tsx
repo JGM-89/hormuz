@@ -39,7 +39,7 @@ export default function WeatherWidget() {
   if (!weather) return null;
 
   return (
-    <div className="absolute bottom-10 right-14 z-10 bg-slate-900/80 backdrop-blur-md rounded-lg border border-slate-700/50 p-3 shadow-xl">
+    <div className="bg-slate-900/80 backdrop-blur-md rounded-lg border border-slate-700/50 p-3 shadow-xl">
       <div className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1.5">
         Strait Conditions
       </div>

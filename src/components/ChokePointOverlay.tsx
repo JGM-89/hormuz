@@ -1,5 +1,5 @@
 import { useStore } from '../store';
-import { getCongestionLevel, LANDMARKS } from '../utils/geo';
+import { getCongestionLevel } from '../utils/geo';
 
 export default function ChokePointOverlay() {
   const stats = useStore((s) => s.stats);
@@ -20,7 +20,7 @@ export default function ChokePointOverlay() {
   );
 
   return (
-    <div className="absolute bottom-4 left-4 z-10 space-y-2 max-w-[240px]">
+    <div className="space-y-2">
       {/* Congestion Card */}
       <div className="bg-slate-900/90 backdrop-blur-md rounded-lg border border-slate-700/50 p-3 shadow-xl">
         <div className="flex items-center gap-2 mb-2">
@@ -78,19 +78,6 @@ export default function ChokePointOverlay() {
         </div>
       )}
 
-      {/* Landmarks */}
-      <div className="bg-slate-900/90 backdrop-blur-md rounded-lg border border-slate-700/50 p-2.5 shadow-xl">
-        <span className="text-[10px] text-slate-500 uppercase tracking-wider font-medium">
-          Key Landmarks
-        </span>
-        <div className="mt-1 space-y-0.5">
-          {LANDMARKS.slice(0, 4).map((lm) => (
-            <div key={lm.name} className="text-[10px] text-slate-400">
-              {lm.name}
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

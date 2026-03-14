@@ -7,7 +7,7 @@ export default function LogoPill() {
   const isLive = aisHealth ? aisHealth.status === 'live' : connected;
 
   return (
-    <div className="absolute top-4 left-4 z-20 flex items-center gap-2.5 bg-slate-900/80 backdrop-blur-md rounded-full px-4 py-2 border border-slate-700/50 shadow-xl">
+    <div className="flex items-center gap-2.5 bg-slate-900/80 backdrop-blur-md rounded-full px-4 py-2 border border-slate-700/50 shadow-xl">
       <div className="text-sm font-bold tracking-tight">
         <span className="text-cyan-400">HORMUZ</span>
         <span className="text-slate-400 font-light ml-1">TRACKER</span>

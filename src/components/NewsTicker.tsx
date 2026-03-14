@@ -64,7 +64,7 @@ export default function NewsTicker() {
   const items = [...news, ...news];
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 z-10 bg-slate-950/90 backdrop-blur-sm border-t border-slate-800/50 overflow-hidden h-8 flex items-center">
+    <div className="bg-slate-950/90 backdrop-blur-sm border-t border-slate-800/50 overflow-hidden h-8 flex items-center">
       <div className="flex-shrink-0 bg-red-600/90 text-white text-[10px] font-bold uppercase tracking-wider px-3 h-full flex items-center z-10">
         News
       </div>

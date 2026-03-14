@@ -64,7 +64,7 @@ export default function VesselDrawer() {
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="absolute top-20 left-4 z-20 bg-slate-900/80 backdrop-blur-md border border-slate-700/50 rounded-lg px-3 py-2 shadow-xl hover:bg-slate-800/80 transition-colors group"
+          className="bg-slate-900/80 backdrop-blur-md border border-slate-700/50 rounded-lg px-3 py-2 shadow-xl hover:bg-slate-800/80 transition-colors group"
         >
           <div className="flex items-center gap-2">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="text-cyan-400">
