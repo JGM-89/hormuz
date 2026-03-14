@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Vessel, Transit, Stats, WSMessage, HistoricalData } from './types';
+import type { Vessel, Transit, Stats, WSMessage, HistoricalData, NewsItem, OilPrice } from './types';
 
 // Data source config — set via env vars at build time
 const GITHUB_RAW_BASE = import.meta.env.VITE_GITHUB_RAW_BASE; // e.g. "https://raw.githubusercontent.com/user/hormuz/data"
@@ -25,6 +25,8 @@ interface AppState {
   transitHistory: Transit[];
   historicalData: HistoricalData | null;
   aisHealth: AisHealth | null;
+  news: NewsItem[];
+  oilPrice: OilPrice | null;
   connected: boolean;
   dataMode: 'github' | 'api' | 'ws';
   lastFetch: number;
@@ -33,6 +35,8 @@ interface AppState {
   setConnected: (connected: boolean) => void;
   setHistoricalData: (data: HistoricalData) => void;
   setAisHealth: (health: AisHealth | null) => void;
+  setNews: (news: NewsItem[]) => void;
+  setOilPrice: (price: OilPrice | null) => void;
   setLiveData: (vessels: Record<string, Vessel>, stats: Stats, transits: Transit[], aisHealth?: AisHealth | null) => void;
 }
 
@@ -52,6 +56,8 @@ export const useStore = create<AppState>((set) => ({
   transitHistory: [],
   historicalData: null,
   aisHealth: null,
+  news: [],
+  oilPrice: null,
   connected: false,
   dataMode: getDataMode(),
   lastFetch: 0,
@@ -60,6 +66,8 @@ export const useStore = create<AppState>((set) => ({
   setConnected: (connected) => set({ connected }),
   setHistoricalData: (data) => set({ historicalData: data }),
   setAisHealth: (health) => set({ aisHealth: health }),
+  setNews: (news) => set({ news }),
+  setOilPrice: (price) => set({ oilPrice: price }),
 
   setLiveData: (vessels, stats, transits, aisHealth) => set({
     vessels: new Map(Object.entries(vessels)),
@@ -142,6 +150,14 @@ async function pollGitHub() {
       const history = await fetchJSON(`${GITHUB_RAW_BASE}/history/daily.json`);
       useStore.getState().setHistoricalData(history);
     }
+
+    // Fetch news + market (non-blocking, fail silently)
+    fetchJSON(`${GITHUB_RAW_BASE}/live/news.json`)
+      .then(data => { if (data?.items) useStore.getState().setNews(data.items); })
+      .catch(() => {});
+    fetchJSON(`${GITHUB_RAW_BASE}/live/market.json`)
+      .then(data => { if (data?.price) useStore.getState().setOilPrice(data); })
+      .catch(() => {});
   } catch (err) {
     console.warn('GitHub poll failed:', err);
     useStore.getState().setConnected(false);

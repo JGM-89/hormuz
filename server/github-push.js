@@ -34,7 +34,7 @@ async function githubAPI(path, method = 'GET', body = null) {
   return res.json();
 }
 
-async function pushFile(path, content) {
+export async function pushFile(path, content) {
   const encoded = Buffer.from(JSON.stringify(content)).toString('base64');
 
   // Get current SHA if we don't have it cached

@@ -2,8 +2,9 @@ import { useEffect, useRef, useCallback } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useStore } from '../store';
-import { HORMUZ_CENTER, HORMUZ_ZOOM, TSS_INBOUND, TSS_OUTBOUND, CHOKEPOINT_POLYGON } from '../utils/geo';
+import { HORMUZ_CENTER, HORMUZ_ZOOM, TSS_INBOUND, TSS_OUTBOUND, CHOKEPOINT_POLYGON, haversineNm } from '../utils/geo';
 import { getSpeedColor } from '../utils/ais';
+import type { Vessel } from '../types';
 
 // Free dark tile style (no API key needed)
 const DARK_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
@@ -114,6 +115,30 @@ export default function Map() {
           'line-dasharray': [2, 2],
         },
       });
+      // Vessel trail source and layers
+      map.addSource('vessel-trail', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+      });
+      map.addLayer({
+        id: 'vessel-trail-line',
+        type: 'line',
+        source: 'vessel-trail',
+        paint: {
+          'line-color': ['case',
+            ['has', 'speed'],
+            ['interpolate', ['linear'], ['get', 'speed'],
+              0, '#64748b',
+              5, '#22d3ee',
+              10, '#10b981',
+              16, '#f59e0b',
+            ],
+            '#22d3ee',
+          ],
+          'line-width': 3,
+          'line-opacity': ['get', 'opacity'],
+        },
+      });
     });
 
     mapRef.current = map;
@@ -123,6 +148,31 @@ export default function Map() {
       mapRef.current = null;
     };
   }, []);
+
+  // Update trail when vessel selected
+  const selectedVessel = useStore((s) => s.selectedVessel);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded()) return;
+
+    const source = map.getSource('vessel-trail') as maplibregl.GeoJSONSource | undefined;
+    if (!source) return;
+
+    if (!selectedVessel) {
+      source.setData({ type: 'FeatureCollection', features: [] });
+      return;
+    }
+
+    const vessel = vessels.get(selectedVessel);
+    if (!vessel || vessel.trail.length < 2) {
+      source.setData({ type: 'FeatureCollection', features: [] });
+      return;
+    }
+
+    // Build segments colored by speed with opacity gradient
+    const features = buildTrailFeatures(vessel);
+    source.setData({ type: 'FeatureCollection', features });
+  }, [selectedVessel, vessels]);
 
   // Update vessel markers
   useEffect(() => {
@@ -198,4 +248,29 @@ export default function Map() {
   return (
     <div ref={mapContainer} className="w-full h-full" />
   );
+}
+
+function buildTrailFeatures(vessel: Vessel): GeoJSON.Feature[] {
+  const { trail } = vessel;
+  const features: GeoJSON.Feature[] = [];
+
+  for (let i = 1; i < trail.length; i++) {
+    const p0 = trail[i - 1];
+    const p1 = trail[i];
+    const dist = haversineNm(p0.lat, p0.lon, p1.lat, p1.lon);
+    const hours = (p1.ts - p0.ts) / 3600000;
+    const speed = hours > 0 ? Math.min(dist / hours, 30) : 0;
+    const opacity = 0.2 + 0.8 * (i / trail.length); // fade from dim to bright
+
+    features.push({
+      type: 'Feature',
+      properties: { speed, opacity },
+      geometry: {
+        type: 'LineString',
+        coordinates: [[p0.lon, p0.lat], [p1.lon, p1.lat]],
+      },
+    });
+  }
+
+  return features;
 }

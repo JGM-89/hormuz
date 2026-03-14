@@ -43,6 +43,36 @@ export const LANDMARKS: { name: string; coords: [number, number] }[] = [
   { name: 'Abu Musa', coords: [55.02, 25.87] },
 ];
 
+// Haversine distance in nautical miles
+export function haversineNm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 3440.065; // Earth radius in nm
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// Compute speeds (in knots) between consecutive trail points
+export function computeTrailSpeeds(trail: { lat: number; lon: number; ts: number }[]): number[] {
+  const speeds: number[] = [];
+  for (let i = 1; i < trail.length; i++) {
+    const dist = haversineNm(trail[i - 1].lat, trail[i - 1].lon, trail[i].lat, trail[i].lon);
+    const hours = (trail[i].ts - trail[i - 1].ts) / 3600000;
+    speeds.push(hours > 0 ? Math.min(dist / hours, 30) : 0); // cap at 30kn
+  }
+  return speeds;
+}
+
+// Transit progress: 0-100% through the strait (based on longitude)
+const STRAIT_LON_START = 56.0;
+const STRAIT_LON_END = 57.1;
+export function getTransitProgress(lon: number, course: number): number {
+  const raw = (lon - STRAIT_LON_START) / (STRAIT_LON_END - STRAIT_LON_START);
+  const clamped = Math.max(0, Math.min(1, raw));
+  // Westbound: invert
+  return (course >= 180 ? 1 - clamped : clamped) * 100;
+}
+
 export function getCongestionLevel(vesselCount: number): {
   level: 'low' | 'moderate' | 'high' | 'critical';
   color: string;

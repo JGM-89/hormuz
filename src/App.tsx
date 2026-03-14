@@ -1,14 +1,19 @@
 import { useEffect, useState } from 'react';
 import { connectDataSource, disconnectDataSource } from './store';
 import Map from './components/Map';
-import StatsBar from './components/StatsBar';
+import LogoPill from './components/LogoPill';
+import FloatingStats from './components/FloatingStats';
+import VesselDrawer from './components/VesselDrawer';
 import VesselPanel from './components/VesselPanel';
-import VesselList from './components/VesselList';
-import TrafficChart from './components/TrafficChart';
 import ChokePointOverlay from './components/ChokePointOverlay';
+import AnalyticsModal from './components/AnalyticsModal';
+import OutageOverlay from './components/OutageOverlay';
+import WeatherWidget from './components/WeatherWidget';
+import NewsTicker from './components/NewsTicker';
+import OilPriceWidget from './components/OilPriceWidget';
 
 export default function App() {
-  const [sidebarTab, setSidebarTab] = useState<'vessels' | 'analytics'>('vessels');
+  const [analyticsOpen, setAnalyticsOpen] = useState(false);
 
   useEffect(() => {
     connectDataSource();
@@ -16,67 +21,36 @@ export default function App() {
   }, []);
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-slate-950 text-slate-200 overflow-hidden">
-      {/* Header */}
-      <header className="flex items-center justify-between px-6 py-2.5 bg-slate-900 border-b border-slate-800">
-        <div className="flex items-center gap-3">
-          <div className="text-lg font-bold tracking-tight">
-            <span className="text-cyan-400">HORMUZ</span>
-            <span className="text-slate-400 font-light ml-1">TRACKER</span>
-          </div>
-          <span className="text-[10px] bg-cyan-500/10 text-cyan-400 px-2 py-0.5 rounded-full font-medium uppercase tracking-wider">
-            Live AIS
-          </span>
-        </div>
-        <div className="text-[10px] text-slate-500 font-mono">
-          Strait of Hormuz · Real-time Tanker Monitoring
-        </div>
-      </header>
+    <div className="h-screen w-screen relative bg-slate-950 text-slate-200 overflow-hidden">
+      {/* Map fills entire viewport */}
+      <Map />
 
-      {/* Stats Bar */}
-      <StatsBar />
+      {/* Floating UI */}
+      <LogoPill />
+      <FloatingStats />
+      <VesselDrawer />
+      <VesselPanel />
+      <ChokePointOverlay />
+      <OutageOverlay />
+      <WeatherWidget />
+      <OilPriceWidget />
+      <NewsTicker />
 
-      {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden relative">
-        {/* Left Sidebar */}
-        <div className="w-72 flex flex-col border-r border-slate-700/50 bg-slate-900/50">
-          {/* Tabs */}
-          <div className="flex border-b border-slate-700/50">
-            <button
-              onClick={() => setSidebarTab('vessels')}
-              className={`flex-1 text-xs py-2 font-medium transition-colors ${
-                sidebarTab === 'vessels'
-                  ? 'text-cyan-400 border-b-2 border-cyan-400'
-                  : 'text-slate-500 hover:text-slate-300'
-              }`}
-            >
-              Vessels
-            </button>
-            <button
-              onClick={() => setSidebarTab('analytics')}
-              className={`flex-1 text-xs py-2 font-medium transition-colors ${
-                sidebarTab === 'analytics'
-                  ? 'text-cyan-400 border-b-2 border-cyan-400'
-                  : 'text-slate-500 hover:text-slate-300'
-              }`}
-            >
-              Analytics
-            </button>
-          </div>
+      {/* Analytics toggle button */}
+      <button
+        onClick={() => setAnalyticsOpen(true)}
+        className="absolute bottom-10 right-4 z-20 bg-slate-900/80 backdrop-blur-md border border-slate-700/50 rounded-lg p-2.5 shadow-xl hover:bg-slate-800/80 transition-colors group"
+        title="Open Analytics"
+      >
+        <svg width="18" height="18" viewBox="0 0 16 16" fill="none" className="text-slate-400 group-hover:text-cyan-400 transition-colors">
+          <rect x="1" y="8" width="3" height="7" rx="0.5" fill="currentColor" opacity="0.6" />
+          <rect x="5.5" y="5" width="3" height="10" rx="0.5" fill="currentColor" opacity="0.8" />
+          <rect x="10" y="1" width="3" height="14" rx="0.5" fill="currentColor" />
+        </svg>
+      </button>
 
-          {/* Tab Content */}
-          <div className="flex-1 overflow-hidden">
-            {sidebarTab === 'vessels' ? <VesselList /> : <TrafficChart />}
-          </div>
-        </div>
-
-        {/* Map */}
-        <div className="flex-1 relative">
-          <Map />
-          <ChokePointOverlay />
-          <VesselPanel />
-        </div>
-      </div>
+      {/* Analytics full-screen overlay */}
+      <AnalyticsModal open={analyticsOpen} onClose={() => setAnalyticsOpen(false)} />
     </div>
   );
 }

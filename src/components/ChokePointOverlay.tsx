@@ -20,7 +20,7 @@ export default function ChokePointOverlay() {
   );
 
   return (
-    <div className="absolute bottom-4 left-4 z-10 space-y-2 max-w-xs">
+    <div className="absolute bottom-4 left-4 z-10 space-y-2 max-w-[240px]">
       {/* Congestion Card */}
       <div className="bg-slate-900/90 backdrop-blur-md rounded-lg border border-slate-700/50 p-3 shadow-xl">
         <div className="flex items-center gap-2 mb-2">

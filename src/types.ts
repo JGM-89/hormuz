@@ -67,6 +67,22 @@ export interface HistoricalData {
   dbStats: { positions: number; transits: number; hourlyRecords: number; oldestRecord: number | null };
 }
 
+export interface NewsItem {
+  title: string;
+  link: string;
+  pubDate: string;
+  source: string;
+}
+
+export interface OilPrice {
+  symbol: string;
+  name: string;
+  price: number;
+  change: number;
+  changePercent: number;
+  timestamp: number;
+}
+
 export type WSMessage =
   | { type: 'snapshot'; vessels: Record<string, Vessel>; stats: Stats; transitHistory: Transit[] }
   | { type: 'vessel_update'; vessel: Vessel; stats: Stats }

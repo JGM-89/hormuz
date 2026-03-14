@@ -9,7 +9,9 @@ import {
   getDailyStats, getHourlyStats, getRecentTransits, getTransitCounts,
   getTopVessels, getDbStats,
 } from './db.js';
-import { pushSnapshot, isGitHubConfigured } from './github-push.js';
+import { pushSnapshot, pushFile, isGitHubConfigured } from './github-push.js';
+import { fetchNews } from './rss.js';
+import { fetchOilPrice } from './market.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 config({ path: resolve(__dirname, '../.env') });
@@ -96,6 +98,12 @@ const server = createServer((req, res) => {
       res.end(JSON.stringify(getTopVessels(30)));
     } else if (req.url === '/api/db/stats') {
       res.end(JSON.stringify(getDbStats()));
+    } else if (req.url === '/api/news') {
+      fetchNews().then(news => res.end(JSON.stringify(news))).catch(() => res.end('[]'));
+      return;
+    } else if (req.url === '/api/market') {
+      fetchOilPrice().then(price => res.end(JSON.stringify(price || {}))).catch(() => res.end('{}'));
+      return;
     } else if (req.url === '/api/health') {
       res.end(JSON.stringify({ status: 'ok', uptime: process.uptime(), github: isGitHubConfigured() }));
     } else {
@@ -327,6 +335,19 @@ setInterval(async () => {
     dbStats: getDbStats(),
   };
   await pushSnapshot(vessels, getStats(), transitHistory, historicalData, getAisHealth());
+
+  // Push news + market data alongside
+  try {
+    const [news, market] = await Promise.allSettled([fetchNews(), fetchOilPrice()]);
+    if (news.status === 'fulfilled' && news.value?.length) {
+      await pushFile('live/news.json', { timestamp: Date.now(), items: news.value });
+    }
+    if (market.status === 'fulfilled' && market.value) {
+      await pushFile('live/market.json', { timestamp: Date.now(), ...market.value });
+    }
+  } catch (err) {
+    console.warn(`[GitHub] News/market push failed: ${err.message}`);
+  }
 }, 60_000);
 
 // Broadcast stats every 10s
