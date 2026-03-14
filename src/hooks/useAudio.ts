@@ -272,51 +272,50 @@ function createRadioLayer(_ctx: AudioContext, _masterGain: GainNode, volume: num
   };
 }
 
-/** Shipping forecast — periodic speech synthesis using real weather data */
+/** Pick a British English voice, waiting for voices to load if needed */
+function pickBritishVoice(): SpeechSynthesisVoice | null {
+  const voices = window.speechSynthesis.getVoices();
+  return voices.find(v => v.lang === 'en-GB') ??
+         voices.find(v => v.lang.startsWith('en-')) ??
+         null;
+}
+
+/** Speak a forecast utterance with consistent settings */
+function speakForecast(text: string, volume: number) {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  const voice = pickBritishVoice();
+  if (voice) utterance.voice = voice;
+  utterance.rate = 0.9;
+  utterance.pitch = 0.9;
+  utterance.volume = Math.max(0, Math.min(1, volume));
+  window.speechSynthesis.speak(utterance);
+}
+
+/** Shipping forecast — periodic speech synthesis using real weather data.
+ *  Does NOT auto-speak on creation — only on 30-min interval.
+ *  Use speakForecastNow() for manual trigger. */
 function createForecastLayer(volume: number): AmbientLayer {
   let stopped = false;
   let intervalId: ReturnType<typeof setInterval> | null = null;
   let currentVolume = volume;
 
-  // Pick a British English voice if available
-  const pickVoice = (): SpeechSynthesisVoice | null => {
-    const voices = window.speechSynthesis.getVoices();
-    return voices.find(v => v.lang === 'en-GB') ??
-           voices.find(v => v.lang.startsWith('en-')) ??
-           null;
-  };
-
   const speak = () => {
-    if (stopped || !window.speechSynthesis) return;
-
+    if (stopped) return;
     const weather = useStore.getState().weather;
     if (!weather.current) return;
-
     const { speakText } = generateShippingForecast(weather.current, weather.daily);
-
-    // Cancel any ongoing speech
-    window.speechSynthesis.cancel();
-
-    const utterance = new SpeechSynthesisUtterance(speakText);
-    const voice = pickVoice();
-    if (voice) utterance.voice = voice;
-    utterance.rate = 0.9;
-    utterance.pitch = 0.9;
-    utterance.volume = Math.max(0, Math.min(1, currentVolume));
-
-    window.speechSynthesis.speak(utterance);
+    speakForecast(speakText, currentVolume);
   };
 
-  // Speak first forecast after a short delay (let voices load)
-  const firstTimer = setTimeout(speak, 5000);
-
-  // Repeat every 30 minutes
+  // Only speak on 30-minute interval — no auto-speak on load
   intervalId = setInterval(speak, 30 * 60_000);
 
   return {
     stop: () => {
       stopped = true;
-      clearTimeout(firstTimer);
       if (intervalId) clearInterval(intervalId);
       window.speechSynthesis?.cancel();
     },
@@ -518,19 +517,8 @@ export function useAudio() {
     if (!state.enabled || !state.forecastEnabled) return;
     const weather = useStore.getState().weather;
     if (!weather.current) return;
-
     const { speakText } = generateShippingForecast(weather.current, weather.daily);
-    window.speechSynthesis?.cancel();
-
-    const utterance = new SpeechSynthesisUtterance(speakText);
-    const voices = window.speechSynthesis.getVoices();
-    const voice = voices.find(v => v.lang === 'en-GB') ??
-                  voices.find(v => v.lang.startsWith('en-')) ?? null;
-    if (voice) utterance.voice = voice;
-    utterance.rate = 0.9;
-    utterance.pitch = 0.9;
-    utterance.volume = Math.max(0, Math.min(1, state.volume));
-    window.speechSynthesis.speak(utterance);
+    speakForecast(speakText, state.volume);
   }, [state.enabled, state.forecastEnabled, state.volume]);
 
   const toggleUiSounds = useCallback(() => {
