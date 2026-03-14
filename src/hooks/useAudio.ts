@@ -7,6 +7,7 @@ interface AudioState {
   sonarEnabled: boolean;
   radioEnabled: boolean;
   uiSoundsEnabled: boolean;
+  radioStreamIndex: number; // -1 = auto (cascade), 0+ = specific stream
 }
 
 const DEFAULT_STATE: AudioState = {
@@ -16,6 +17,7 @@ const DEFAULT_STATE: AudioState = {
   sonarEnabled: true,
   radioEnabled: true,
   uiSoundsEnabled: true,
+  radioStreamIndex: -1,
 };
 
 function loadState(): AudioState {
@@ -190,23 +192,24 @@ function createWhiteNoiseBuffer(ctx: AudioContext, durationSec: number): AudioBu
 // Volume is controlled directly via audio.volume instead of through the gain chain.
 // Streams are ordered by preference — European maritime first, US as fallback.
 // Every 5 minutes, retries preferred streams so we don't get stuck on a fallback.
-const MARINE_STREAMS = [
-  'https://broadcastify.cdnstream1.com/44085', // NW Ireland — VHF CH 16, 1, 2, 5 (UK/Irish Sea)
-  'https://broadcastify.cdnstream1.com/40213', // Vlissingen — KNRM Coastguard, North Sea entrance
-  'https://broadcastify.cdnstream1.com/20660', // Eems/Dollard — Netherlands Coastguard
-  'https://broadcastify.cdnstream1.com/12874', // Terheijde — Dutch marine VHF
-  'https://broadcastify.cdnstream1.com/35475', // VHF CH 16, 67, 61
-  'https://broadcastify.cdnstream1.com/44773', // Marine SAR CH 16, 65A, 82A
-  'https://broadcastify.cdnstream1.com/17329', // NJ/NY marine (last resort)
+export const MARINE_STREAMS = [
+  { url: 'https://broadcastify.cdnstream1.com/44085', label: 'NW Ireland (CH16)' },
+  { url: 'https://broadcastify.cdnstream1.com/40213', label: 'Vlissingen (North Sea)' },
+  { url: 'https://broadcastify.cdnstream1.com/20660', label: 'Netherlands CG' },
+  { url: 'https://broadcastify.cdnstream1.com/12874', label: 'Terheijde (Dutch)' },
+  { url: 'https://broadcastify.cdnstream1.com/35475', label: 'VHF CH 16/67/61' },
+  { url: 'https://broadcastify.cdnstream1.com/44773', label: 'Marine SAR' },
+  { url: 'https://broadcastify.cdnstream1.com/17329', label: 'NJ/NY Marine' },
 ];
 
 /** Marine radio — live Broadcastify VHF stream via plain HTML5 Audio (no CORS issues) */
-function createRadioLayer(_ctx: AudioContext, _masterGain: GainNode, volume: number): AmbientLayer {
+function createRadioLayer(_ctx: AudioContext, _masterGain: GainNode, volume: number, forcedIndex: number): AmbientLayer {
   const audio = new Audio();
   let stopped = false;
-  let streamIndex = 0;
+  let streamIndex = forcedIndex >= 0 ? forcedIndex : 0;
   let currentStreamIndex = -1;
   let retryTimer: ReturnType<typeof setInterval> | null = null;
+  const isForced = forcedIndex >= 0;
 
   const setVol = (v: number) => {
     audio.volume = Math.max(0, Math.min(1, v * 0.8));
@@ -215,8 +218,9 @@ function createRadioLayer(_ctx: AudioContext, _masterGain: GainNode, volume: num
 
   const tryStream = () => {
     if (stopped || streamIndex >= MARINE_STREAMS.length) return;
-    audio.src = MARINE_STREAMS[streamIndex];
+    audio.src = MARINE_STREAMS[streamIndex].url;
     audio.play().catch(() => {
+      // If forced to a specific stream and it fails, cascade from next
       streamIndex++;
       setTimeout(tryStream, 500);
     });
@@ -242,14 +246,15 @@ function createRadioLayer(_ctx: AudioContext, _masterGain: GainNode, volume: num
 
   tryStream();
 
-  // Periodically retry preferred streams if we fell back to a lower-priority one
-  retryTimer = setInterval(() => {
-    if (stopped || currentStreamIndex <= 0) return;
-    // Try to reconnect to the top-priority stream
-    streamIndex = 0;
-    audio.pause();
-    tryStream();
-  }, 5 * 60_000);
+  // In auto mode, periodically retry preferred streams if we fell back
+  if (!isForced) {
+    retryTimer = setInterval(() => {
+      if (stopped || currentStreamIndex <= 0) return;
+      streamIndex = 0;
+      audio.pause();
+      tryStream();
+    }, 5 * 60_000);
+  }
 
   return {
     stop: () => {
@@ -337,9 +342,9 @@ export function useAudio() {
       layers.sonar = null;
     }
 
-    // Radio
+    // Radio — recreate when stream selection changes
     if (state.radioEnabled && !layers.radio) {
-      layers.radio = createRadioLayer(ctx, master, state.volume);
+      layers.radio = createRadioLayer(ctx, master, state.volume, state.radioStreamIndex);
     } else if (!state.radioEnabled && layers.radio) {
       layers.radio.stop();
       layers.radio = null;
@@ -348,7 +353,7 @@ export function useAudio() {
     return () => {
       teardownAll();
     };
-  }, [state.enabled, state.oceanEnabled, state.sonarEnabled, state.radioEnabled]);
+  }, [state.enabled, state.oceanEnabled, state.sonarEnabled, state.radioEnabled, state.radioStreamIndex]);
 
   // Update master volume (and radio which uses its own volume control)
   useEffect(() => {
@@ -423,6 +428,19 @@ export function useAudio() {
     setState(s => ({ ...s, radioEnabled: !s.radioEnabled }));
   }, []);
 
+  const setRadioStream = useCallback((index: number) => {
+    setState(s => {
+      if (s.radioStreamIndex === index) return s;
+      return { ...s, radioStreamIndex: index };
+    });
+    // Force radio layer to recreate with new stream
+    const layers = layersRef.current;
+    if (layers.radio) {
+      layers.radio.stop();
+      layers.radio = null;
+    }
+  }, []);
+
   const toggleUiSounds = useCallback(() => {
     setState(s => ({ ...s, uiSoundsEnabled: !s.uiSoundsEnabled }));
   }, []);
@@ -434,6 +452,7 @@ export function useAudio() {
     toggleOcean,
     toggleSonar,
     toggleRadio,
+    setRadioStream,
     toggleUiSounds,
     playSound,
   };

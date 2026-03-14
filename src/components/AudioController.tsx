@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useAudio } from '../hooks/useAudio';
+import { useAudio, MARINE_STREAMS } from '../hooks/useAudio';
 import { Volume2, VolumeX, Waves, Radar, Radio, Zap } from 'lucide-react';
 
 export default function AudioController() {
@@ -102,6 +102,23 @@ export default function AudioController() {
               enabled={audio.radioEnabled}
               onToggle={audio.toggleRadio}
             />
+
+            {/* Feed selector — only visible when radio is on */}
+            {audio.radioEnabled && (
+              <div className="pl-7">
+                <select
+                  value={audio.radioStreamIndex}
+                  onChange={(e) => audio.setRadioStream(Number(e.target.value))}
+                  className="w-full text-[10px] bg-surface-2 text-text-secondary border border-border-dim rounded-sm px-1.5 py-1 cursor-pointer focus:outline-none focus:border-accent appearance-none"
+                  aria-label="Select VHF feed"
+                >
+                  <option value={-1}>Auto (best available)</option>
+                  {MARINE_STREAMS.map((s, i) => (
+                    <option key={s.url} value={i}>{s.label}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Divider */}
             <div className="h-px bg-border-dim" />
