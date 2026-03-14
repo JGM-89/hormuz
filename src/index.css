@@ -27,7 +27,7 @@ body,
 
 /* Accessibility: respect reduced-motion preferences */
 @media (prefers-reduced-motion: reduce) {
-  *,
+  *:not(.animate-ticker),
   *::before,
   *::after {
     animation-duration: 0.01ms !important;

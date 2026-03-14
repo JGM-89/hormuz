@@ -59,7 +59,7 @@ export default function App() {
             <ChokePointOverlay />
           </div>
           <div className="flex-1" />
-          <div className="pointer-events-auto flex flex-wrap items-end justify-end gap-2">
+          <div className="pointer-events-auto flex flex-col items-end gap-2">
             <WeatherWidget />
             <AnalyticsButton onClick={() => setAnalyticsOpen(true)} />
           </div>
