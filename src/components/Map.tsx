@@ -41,7 +41,7 @@ export default function Map() {
     map.addControl(new maplibregl.NavigationControl(), 'top-right');
     map.addControl(
       new maplibregl.ScaleControl({ maxWidth: 200, unit: 'nautical' }),
-      'bottom-right',
+      'bottom-left',
     );
 
     map.on('load', () => {

@@ -80,13 +80,13 @@ export default function App() {
 
           {/* Floating overlays — absolutely positioned within the map area */}
           <div className="absolute inset-0 z-10 pointer-events-none">
-            {/* Bottom-left: Choke point */}
-            <div className="absolute bottom-3 left-3 pointer-events-auto max-w-[260px]">
+            {/* Bottom-left: Choke point (above MapLibre attribution) */}
+            <div className="absolute bottom-8 left-3 pointer-events-auto max-w-[260px]">
               <ChokePointOverlay />
             </div>
 
-            {/* Bottom-right: Weather */}
-            <div className="absolute bottom-3 right-3 pointer-events-auto">
+            {/* Bottom-right: Weather (above MapLibre attribution) */}
+            <div className="absolute bottom-8 right-3 pointer-events-auto">
               <WeatherWidget />
             </div>
           </div>
