@@ -6,6 +6,7 @@ import {
 import { useStore } from '../store';
 import { computeRiskPremium, formatCommodityPrice, getSeverity } from '../utils/commodities';
 import { getMockCommodities } from '../utils/mockCommodities';
+import { generateShippingForecast } from '../utils/shippingForecast';
 import type { Vessel, CommodityData, WeatherCurrent, WeatherForecastDay } from '../types';
 
 const COLORS = ['#00b4d8', '#ffab00', '#00e676', '#7c4dff', '#ff6e40', '#448aff'];
@@ -455,6 +456,11 @@ export default function AnalyticsModal({ open, onClose }: { open: boolean; onClo
     [weather],
   );
 
+  const shippingForecast = useMemo(() => {
+    if (!weather.current) return null;
+    return generateShippingForecast(weather.current, weather.daily);
+  }, [weather]);
+
   if (!open) return null;
 
   return (
@@ -829,6 +835,16 @@ export default function AnalyticsModal({ open, onClose }: { open: boolean; onClo
 
               <AnalysisProse>{marketAnalysis}</AnalysisProse>
             </section>
+
+            {/* SHIPPING FORECAST */}
+            {shippingForecast && (
+              <section>
+                <SectionHeader title="Shipping Forecast" />
+                <div className="bg-surface-1 rounded-sm border border-accent/20 p-3 font-mono text-[10px] leading-relaxed text-accent/80 whitespace-pre-wrap">
+                  {shippingForecast.text}
+                </div>
+              </section>
+            )}
 
             {/* MARITIME CONDITIONS */}
             <section>

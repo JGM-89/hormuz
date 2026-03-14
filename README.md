@@ -6,15 +6,40 @@ Real-time vessel tracking dashboard for the Strait of Hormuz, one of the world's
 
 ## Features
 
+### Vessel Tracking
 - Live AIS vessel tracking via [AISStream.io](https://aisstream.io) WebSocket feed
 - Interactive map with vessel trails (MapLibre GL JS, dark basemap)
 - Vessel category filters (tankers, cargo, passenger, etc.)
 - Strait congestion monitoring with eastbound/westbound transit counts
-- Speed anomaly detection
-- Brent crude oil price widget
-- Strait weather conditions (wind, waves, temperature via Open-Meteo)
-- Maritime news ticker (Google News, gCaptain, Maritime Executive)
-- Analytics modal with historical charts
+- Speed anomaly detection and stale signal alerts
+
+### Intelligence Report
+- Full-screen 2-column intelligence report (Expand view)
+- 5 rule-based analysis generators producing natural language from live data
+- Executive summary, traffic analysis, market analysis, weather assessment, anomaly analysis
+- Historical trend comparison with 30-day averages
+
+### Commodity & Market Data
+- 8 commodity price trackers (Brent, WTI, Natural Gas, TTF, LNG, Urea, Aluminium, Ammonia)
+- Hormuz sensitivity scoring per commodity
+- Risk premium calculation based on strait conditions
+- Sparkline price charts with change indicators
+
+### Maritime Weather
+- Real-time wind, waves, visibility, Beaufort scale (Open-Meteo API)
+- Passage risk assessment (low/moderate/high/severe)
+- 5-day forecast with per-day risk indicators
+- BBC-style shipping forecast text display
+
+### Audio System
+- Procedural ocean ambience (pink noise bed + VHF static hiss)
+- Sonar ping (periodic sine tone with exponential decay)
+- Live marine VHF radio (7 Broadcastify streams, auto-cascade with manual selector)
+- Spoken shipping forecast via Web Speech API (British English, every 30 minutes)
+- Per-layer toggle controls with master volume
+
+### News & Data
+- Maritime news ticker (Google News commodity/shipping search, gCaptain, Maritime Executive)
 - GitHub Pages frontend with data snapshots pushed to `data` branch
 
 ## Architecture
@@ -47,6 +72,7 @@ The server is intentionally minimal — it relays raw AIS messages and the front
 |----------|------|
 | Frontend | React 18, TypeScript, Vite, Tailwind CSS v4, Zustand, Recharts |
 | Map      | MapLibre GL JS with CARTO dark basemap |
+| Audio    | Web Audio API (procedural), HTML5 Audio (VHF streams), Web Speech API (forecast) |
 | Server   | Node.js, WebSocket (ws), better-sqlite3 |
 | Deploy   | GitHub Pages (frontend), Docker on Synology NAS (server) |
 

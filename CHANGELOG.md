@@ -1,5 +1,56 @@
 # Changelog
 
+## [0.7.0] - 2026-03-14
+
+### Added
+- Shipping forecast — BBC-style text readout generated from live weather data
+- Spoken shipping forecast via Web Speech API (British English voice, every 30 min)
+- Forecast toggle + "Speak Now" button in audio settings panel
+- Shipping forecast section in sidebar Charts tab and expanded intelligence report
+
+## [0.6.0] - 2026-03-14
+
+### Added
+- VHF feed selector dropdown in audio settings (7 streams: NW Ireland, Vlissingen, Netherlands CG, etc.)
+- UK/Irish Sea and North Sea entrance streams as top-priority feeds
+- Stream selection persists across page reloads
+
+### Changed
+- Reduced procedural ambient volume (ocean, static, sonar) by 80%
+- Radio layer supports forced stream index with fallback cascade
+
+## [0.5.0] - 2026-03-14
+
+### Added
+- Full intelligence report with 2-column dashboard layout (Expand view)
+- 5 rule-based analysis generators (executive summary, traffic, market, weather, anomaly)
+- Shared mock commodity data for development without backend
+- Commodity risk premium calculation and Hormuz sensitivity scoring
+
+### Changed
+- Intelligence report fills entire viewport with independently scrolling columns
+- News ticker search updated from geopolitical to economic/commodity terms
+- Anomaly messaging now honest when no AIS data is connected
+
+### Fixed
+- VHF radio getting stuck on US fallback stream
+- Misleading "strait operating normally" when no data available
+
+## [0.4.0] - 2026-03-14
+
+### Added
+- Procedural ocean ambience (pink noise + VHF static hiss)
+- Sonar ping layer (periodic sine tone with exponential decay)
+- Live marine VHF radio via Broadcastify streams (auto-cascade)
+- Audio controller with per-layer toggles and master volume
+- Trader-grade commodity panel with 8 commodities and sparkline charts
+- Weather panel with Beaufort scale, passage risk, 5-day forecast
+- V0 visual polish pass
+
+### Changed
+- 3-column command centre layout (vessels, map, analytics)
+- Analytics sidebar with Charts/Alerts tabs
+
 ## [0.3.0] - 2026-03-14
 
 ### Changed
