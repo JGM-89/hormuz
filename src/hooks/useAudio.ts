@@ -272,12 +272,23 @@ function createRadioLayer(_ctx: AudioContext, _masterGain: GainNode, volume: num
   };
 }
 
-/** Pick a British English voice, waiting for voices to load if needed */
-function pickBritishVoice(): SpeechSynthesisVoice | null {
-  const voices = window.speechSynthesis.getVoices();
-  return voices.find(v => v.lang === 'en-GB') ??
-         voices.find(v => v.lang.startsWith('en-')) ??
-         null;
+/** Cached British voice — resolved once voices load (async in Chrome) */
+let cachedBritishVoice: SpeechSynthesisVoice | null = null;
+let voicesResolved = false;
+
+function resolveBritishVoice() {
+  const voices = window.speechSynthesis?.getVoices() ?? [];
+  if (voices.length === 0) return;
+  cachedBritishVoice = voices.find(v => v.lang === 'en-GB') ??
+                       voices.find(v => v.lang.startsWith('en-')) ??
+                       null;
+  voicesResolved = true;
+}
+
+// Eagerly resolve on load + listen for async voiceschanged
+if (typeof window !== 'undefined' && window.speechSynthesis) {
+  resolveBritishVoice();
+  window.speechSynthesis.addEventListener('voiceschanged', resolveBritishVoice);
 }
 
 /** Speak a forecast utterance with consistent settings */
@@ -286,8 +297,8 @@ function speakForecast(text: string, volume: number) {
   window.speechSynthesis.cancel();
 
   const utterance = new SpeechSynthesisUtterance(text);
-  const voice = pickBritishVoice();
-  if (voice) utterance.voice = voice;
+  if (!voicesResolved) resolveBritishVoice();
+  if (cachedBritishVoice) utterance.voice = cachedBritishVoice;
   utterance.rate = 0.9;
   utterance.pitch = 0.9;
   utterance.volume = Math.max(0, Math.min(1, volume));
