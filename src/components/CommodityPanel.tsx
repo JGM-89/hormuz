@@ -189,8 +189,8 @@ function CommodityRow({
                   <AreaChart data={c.history} margin={{ top: 2, right: 2, bottom: 0, left: 2 }}>
                     <Tooltip
                       contentStyle={tooltipStyle}
-                      formatter={(val: number) => [formatCommodityPrice(val, c.symbol), 'Price']}
-                      labelFormatter={(ts: number) => new Date(ts).toLocaleDateString()}
+                      formatter={(val: unknown) => [formatCommodityPrice(Number(val), c.symbol), 'Price']}
+                      labelFormatter={(ts: unknown) => new Date(Number(ts)).toLocaleDateString()}
                     />
                     <Area
                       type="monotone"
