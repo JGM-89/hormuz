@@ -294,11 +294,12 @@ function speakForecast(text: string, volume: number) {
   window.speechSynthesis.speak(utterance);
 }
 
-/** Shipping forecast — periodic speech synthesis using real weather data.
- *  Does NOT auto-speak on creation — only on 30-min interval.
+/** Shipping forecast — speaks at fixed clock times (:00 and :30).
+ *  Does NOT auto-speak on creation — only at the next half-hour mark.
  *  Use speakForecastNow() for manual trigger. */
 function createForecastLayer(volume: number): AmbientLayer {
   let stopped = false;
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
   let intervalId: ReturnType<typeof setInterval> | null = null;
   let currentVolume = volume;
 
@@ -310,12 +311,22 @@ function createForecastLayer(volume: number): AmbientLayer {
     speakForecast(speakText, currentVolume);
   };
 
-  // Only speak on 30-minute interval — no auto-speak on load
-  intervalId = setInterval(speak, 30 * 60_000);
+  // Calculate ms until next :00 or :30
+  const now = new Date();
+  const mins = now.getMinutes();
+  const nextHalf = mins < 30 ? 30 : 60;
+  const msUntilNext = ((nextHalf - mins) * 60 - now.getSeconds()) * 1000 - now.getMilliseconds();
+
+  // First speak at the next half-hour, then every 30 min
+  timeoutId = setTimeout(() => {
+    speak();
+    intervalId = setInterval(speak, 30 * 60_000);
+  }, msUntilNext);
 
   return {
     stop: () => {
       stopped = true;
+      if (timeoutId) clearTimeout(timeoutId);
       if (intervalId) clearInterval(intervalId);
       window.speechSynthesis?.cancel();
     },
