@@ -310,7 +310,7 @@ setInterval(() => {
   hourlyMsgCount = 0;
 }, 300_000);
 
-// Push to GitHub
+// Push to GitHub (always push — even with 0 vessels, frontend needs aisHealth + commodities)
 setInterval(async () => {
   if (!isGitHubConfigured()) return;
   const historicalData = {
@@ -319,7 +319,9 @@ setInterval(async () => {
     topVessels: getTopVessels(30),
     dbStats: getDbStats(),
   };
-  await pushSnapshot(vessels, transitHistory, historicalData, getAisHealth());
+  // Include cached commodity data so GitHub Pages gets real prices
+  const commodities = commodityCache || [];
+  await pushSnapshot(vessels, transitHistory, historicalData, getAisHealth(), commodities);
 }, PUSH_INTERVAL_MS);
 
 // --- Commodity Price Proxy ---

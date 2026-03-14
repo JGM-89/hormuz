@@ -61,19 +61,27 @@ export async function pushFile(path, content) {
   return result;
 }
 
-export async function pushSnapshot(vessels, transitHistory, historicalData, aisHealth = null) {
+export async function pushSnapshot(vessels, transitHistory, historicalData, aisHealth = null, commodities = null) {
   if (!GITHUB_TOKEN || !GITHUB_REPO) {
     return; // silently skip if not configured
   }
 
   try {
-    // Live snapshot — raw vessels, no pre-computed stats (frontend computes those)
+    // Always push live snapshot — even with 0 vessels, the frontend needs aisHealth status
     await pushFile('live/vessels.json', {
       timestamp: Date.now(),
       vessels: Object.fromEntries(vessels),
       recentTransits: transitHistory.slice(-50),
       aisHealth,
     });
+
+    // Push commodity prices so GitHub Pages site gets real data
+    if (commodities && commodities.length > 0) {
+      await pushFile('live/commodities.json', {
+        timestamp: Date.now(),
+        commodities,
+      });
+    }
 
     // Historical data (content changes slowly)
     if (historicalData) {
@@ -83,7 +91,7 @@ export async function pushSnapshot(vessels, transitHistory, historicalData, aisH
       });
     }
 
-    console.log(`[GitHub] Pushed snapshot (${vessels.size} vessels)`);
+    console.log(`[GitHub] Pushed snapshot (${vessels.size} vessels, ${commodities?.length || 0} commodities, AIS: ${aisHealth?.status || '?'})`);
   } catch (err) {
     console.error(`[GitHub] Push failed: ${err.message}`);
   }

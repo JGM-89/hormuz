@@ -194,12 +194,15 @@ async function pollGitHub() {
       useStore.getState().setHistoricalData(history);
     }
 
-    // Fetch news + market (non-blocking, fail silently)
+    // Fetch news + market + commodities (non-blocking, fail silently)
     fetchJSON(`${GITHUB_RAW_BASE}/live/news.json`)
       .then(data => { if (data?.items) useStore.getState().setNews(data.items); })
       .catch(() => {});
     fetchJSON(`${GITHUB_RAW_BASE}/live/market.json`)
       .then(data => { if (data?.price) useStore.getState().setOilPrice(data); })
+      .catch(() => {});
+    fetchJSON(`${GITHUB_RAW_BASE}/live/commodities.json`)
+      .then(data => { if (data?.commodities?.length > 0) useStore.getState().setCommodities(data.commodities); })
       .catch(() => {});
   } catch (err) {
     console.warn('GitHub poll failed:', err);
