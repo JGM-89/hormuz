@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import type { Vessel, Transit, Stats, WSMessage, HistoricalData, NewsItem, OilPrice } from './types';
+import type { Vessel, RawVessel, Transit, Stats, WSMessage, HistoricalData, NewsItem, OilPrice } from './types';
+import { enrichVessel } from './utils/ais';
 
 // Data source config — set via env vars at build time
 const GITHUB_RAW_BASE = import.meta.env.VITE_GITHUB_RAW_BASE; // e.g. "https://raw.githubusercontent.com/user/hormuz/data"
@@ -37,7 +38,7 @@ interface AppState {
   setAisHealth: (health: AisHealth | null) => void;
   setNews: (news: NewsItem[]) => void;
   setOilPrice: (price: OilPrice | null) => void;
-  setLiveData: (vessels: Record<string, Vessel>, stats: Stats, transits: Transit[], aisHealth?: AisHealth | null) => void;
+  setLiveData: (vessels: Record<string, RawVessel>, stats: Partial<Stats> | undefined, transits: Transit[], aisHealth?: AisHealth | null) => void;
 }
 
 const defaultStats: Stats = {
@@ -48,6 +49,30 @@ const defaultStats: Stats = {
   messageCount: 0,
   lastUpdate: 0,
 };
+
+function computeStats(vessels: Map<string, Vessel>, serverStats?: Partial<Stats>): Stats {
+  const all = [...vessels.values()];
+  const moving = all.filter(v => v.speed > 0.5);
+  const avgSpeed = moving.length > 0
+    ? Math.round(moving.reduce((sum, v) => sum + v.speed, 0) / moving.length * 10) / 10
+    : 0;
+  return {
+    totalVessels: all.length,
+    inTransit: moving.length,
+    anchored: all.length - moving.length,
+    avgSpeed,
+    messageCount: serverStats?.messageCount ?? 0,
+    lastUpdate: Date.now(),
+  };
+}
+
+function enrichVesselMap(raw: Record<string, RawVessel>): Map<string, Vessel> {
+  const map = new Map<string, Vessel>();
+  for (const [mmsi, v] of Object.entries(raw)) {
+    map.set(mmsi, enrichVessel(v as RawVessel));
+  }
+  return map;
+}
 
 export const useStore = create<AppState>((set) => ({
   vessels: new Map(),
@@ -69,38 +94,44 @@ export const useStore = create<AppState>((set) => ({
   setNews: (news) => set({ news }),
   setOilPrice: (price) => set({ oilPrice: price }),
 
-  setLiveData: (vessels, stats, transits, aisHealth) => set({
-    vessels: new Map(Object.entries(vessels)),
-    stats,
-    transitHistory: transits,
-    aisHealth: aisHealth ?? null,
-    lastFetch: Date.now(),
-    connected: true,
-  }),
+  setLiveData: (vessels, stats, transits, aisHealth) => {
+    const enriched = enrichVesselMap(vessels);
+    return set({
+      vessels: enriched,
+      stats: computeStats(enriched, stats),
+      transitHistory: transits,
+      aisHealth: aisHealth ?? null,
+      lastFetch: Date.now(),
+      connected: true,
+    });
+  },
 
   handleMessage: (msg) => {
     switch (msg.type) {
-      case 'snapshot':
+      case 'snapshot': {
+        const vessels = enrichVesselMap(msg.vessels);
         set({
-          vessels: new Map(Object.entries(msg.vessels)),
-          stats: msg.stats,
+          vessels,
+          stats: computeStats(vessels, msg.stats),
           transitHistory: msg.transitHistory,
         });
         break;
-      case 'vessel_update':
+      }
+      case 'vessel_update': {
         set((state) => {
           const newVessels = new Map(state.vessels);
-          newVessels.set(msg.vessel.mmsi, msg.vessel);
-          return { vessels: newVessels, stats: msg.stats };
+          newVessels.set(msg.vessel.mmsi, enrichVessel(msg.vessel));
+          return { vessels: newVessels, stats: computeStats(newVessels, msg.stats) };
         });
         break;
+      }
       case 'transit':
         set((state) => ({
           transitHistory: [...state.transitHistory.slice(-199), msg.transit],
         }));
         break;
       case 'stats':
-        set({ stats: msg.stats });
+        // Legacy: server sends pre-computed stats. Ignore — we compute locally.
         break;
     }
   },
@@ -167,7 +198,7 @@ async function pollGitHub() {
 async function pollAPI() {
   try {
     const live = await fetchJSON(`${API_BASE}/api/live`);
-    useStore.getState().setLiveData(live.vessels, live.stats, live.recentTransits || []);
+    useStore.getState().setLiveData(live.vessels, live.stats, live.recentTransits || [], live.aisHealth);
 
     const state = useStore.getState();
     if (!state.historicalData || Date.now() - state.lastFetch > 60_000) {

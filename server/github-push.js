@@ -61,22 +61,21 @@ export async function pushFile(path, content) {
   return result;
 }
 
-export async function pushSnapshot(vessels, stats, transitHistory, historicalData, aisHealth = null) {
+export async function pushSnapshot(vessels, transitHistory, historicalData, aisHealth = null) {
   if (!GITHUB_TOKEN || !GITHUB_REPO) {
     return; // silently skip if not configured
   }
 
   try {
-    // Live snapshot (updates every 15s)
+    // Live snapshot — raw vessels, no pre-computed stats (frontend computes those)
     await pushFile('live/vessels.json', {
       timestamp: Date.now(),
       vessels: Object.fromEntries(vessels),
-      stats,
       recentTransits: transitHistory.slice(-50),
       aisHealth,
     });
 
-    // Historical data (updates every 15s too, but content changes slowly)
+    // Historical data (content changes slowly)
     if (historicalData) {
       await pushFile('history/daily.json', {
         timestamp: Date.now(),

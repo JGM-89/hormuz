@@ -9,20 +9,21 @@ import {
   getDailyStats, getHourlyStats, getRecentTransits, getTransitCounts,
   getTopVessels, getDbStats,
 } from './db.js';
-import { pushSnapshot, pushFile, isGitHubConfigured } from './github-push.js';
-import { fetchNews } from './rss.js';
-import { fetchOilPrice } from './market.js';
+import { pushSnapshot, isGitHubConfigured } from './github-push.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 config({ path: resolve(__dirname, '../.env') });
 
+// --- All config from env vars with sensible defaults ---
 const API_KEY = process.env.AISSTREAM_API_KEY;
 const PORT = process.env.PORT || 3001;
-
-// Strait of Hormuz bounding box
-const HORMUZ_BBOX = [[54.0, 24.0], [58.5, 27.5]];
-
-const isTanker = (type) => type >= 80 && type <= 89;
+const BOUNDING_BOX = process.env.BOUNDING_BOX
+  ? JSON.parse(process.env.BOUNDING_BOX)
+  : [[54.0, 24.0], [58.5, 27.5]];
+const STALE_MINUTES = parseInt(process.env.STALE_MINUTES || '30', 10);
+const MAX_TRAIL_POINTS = parseInt(process.env.MAX_TRAIL_POINTS || '20', 10);
+const PUSH_INTERVAL_MS = parseInt(process.env.PUSH_INTERVAL_MS || '60000', 10);
+const TRANSIT_LONGITUDE = parseFloat(process.env.TRANSIT_LONGITUDE || '56.5');
 
 // In-memory state
 const vessels = new Map();
@@ -43,7 +44,6 @@ function getAisHealth() {
   const connected = aisConnectedSince !== null;
   const connectedFor = connected ? now - aisConnectedSince : 0;
 
-  // Consider AIS "down" if connected for >60s but no messages received
   const receiving = connected && lastAisMessage > 0 && timeSinceLastMsg < 120_000;
   const possibleOutage = connected && connectedFor > 60_000 && !receiving;
 
@@ -62,11 +62,22 @@ function getAisHealth() {
   };
 }
 
-const TANKER_TYPES = {
-  80: 'Tanker', 81: 'Tanker (Hazmat A)', 82: 'Tanker (Hazmat B)',
-  83: 'Tanker (Hazmat C)', 84: 'Tanker (Hazmat D)', 85: 'Tanker',
-  86: 'Tanker', 87: 'Tanker', 88: 'Tanker', 89: 'Tanker (No info)',
-};
+// Internal stats for DB writes only (not sent to clients)
+function getInternalStats() {
+  const allVessels = [...vessels.values()];
+  const moving = allVessels.filter(v => v.speed > 0.5);
+  const avgSpeed = moving.length > 0
+    ? moving.reduce((sum, v) => sum + v.speed, 0) / moving.length
+    : 0;
+  return {
+    totalVessels: allVessels.length,
+    inTransit: moving.length,
+    anchored: allVessels.length - moving.length,
+    avgSpeed: Math.round(avgSpeed * 10) / 10,
+    messageCount,
+    lastUpdate: Date.now(),
+  };
+}
 
 // --- HTTP server for static files + REST API ---
 const distDir = resolve(__dirname, '../dist');
@@ -82,8 +93,8 @@ const server = createServer((req, res) => {
     if (req.url === '/api/live') {
       res.end(JSON.stringify({
         vessels: Object.fromEntries(vessels),
-        stats: getStats(),
         recentTransits: transitHistory.slice(-50),
+        aisHealth: getAisHealth(),
         timestamp: Date.now(),
       }));
     } else if (req.url === '/api/stats/daily') {
@@ -98,12 +109,6 @@ const server = createServer((req, res) => {
       res.end(JSON.stringify(getTopVessels(30)));
     } else if (req.url === '/api/db/stats') {
       res.end(JSON.stringify(getDbStats()));
-    } else if (req.url === '/api/news') {
-      fetchNews().then(news => res.end(JSON.stringify(news))).catch(() => res.end('[]'));
-      return;
-    } else if (req.url === '/api/market') {
-      fetchOilPrice().then(price => res.end(JSON.stringify(price || {}))).catch(() => res.end('{}'));
-      return;
     } else if (req.url === '/api/health') {
       res.end(JSON.stringify({ status: 'ok', uptime: process.uptime(), github: isGitHubConfigured() }));
     } else {
@@ -148,7 +153,6 @@ wss.on('connection', (ws) => {
   ws.send(JSON.stringify({
     type: 'snapshot',
     vessels: Object.fromEntries(vessels),
-    stats: getStats(),
     transitHistory: transitHistory.slice(-100),
   }));
 
@@ -160,23 +164,6 @@ function broadcast(data) {
   for (const client of clients) {
     if (client.readyState === WebSocket.OPEN) client.send(msg);
   }
-}
-
-function getStats() {
-  const allVessels = [...vessels.values()];
-  const moving = allVessels.filter(v => v.speed > 0.5);
-  const anchored = allVessels.filter(v => v.speed <= 0.5);
-  const avgSpeed = moving.length > 0
-    ? moving.reduce((sum, v) => sum + v.speed, 0) / moving.length
-    : 0;
-  return {
-    totalVessels: allVessels.length,
-    inTransit: moving.length,
-    anchored: anchored.length,
-    avgSpeed: Math.round(avgSpeed * 10) / 10,
-    messageCount,
-    lastUpdate: Date.now(),
-  };
 }
 
 // --- AISStream connection ---
@@ -197,10 +184,10 @@ function connectToAISStream() {
     aisConnectedSince = Date.now();
     aisSocket.send(JSON.stringify({
       APIKey: API_KEY,
-      BoundingBoxes: [HORMUZ_BBOX],
+      BoundingBoxes: [BOUNDING_BOX],
       FilterMessageTypes: ['PositionReport', 'ShipStaticData'],
     }));
-    console.log('Subscribed to Strait of Hormuz bounding box');
+    console.log(`Subscribed to bounding box: ${JSON.stringify(BOUNDING_BOX)}`);
   });
 
   let msgTotal = 0;
@@ -249,10 +236,6 @@ function handleAISMessage(msg) {
 
   const shipType = meta.ShipType ?? knownShipTypes.get(String(meta.MMSI)) ?? pos.Type ?? 0;
   const name = (meta.ShipName || '').trim();
-  const isTankerByType = isTanker(shipType);
-  const isTankerByName = /tanker|crude|oil|petrol|lng|lpg|vlcc|ulcc|suezmax|aframax/i.test(name);
-
-  if (!isTankerByType && !isTankerByName) return;
 
   messageCount++;
   hourlyMsgCount++;
@@ -260,6 +243,7 @@ function handleAISMessage(msg) {
   const mmsi = String(meta.MMSI);
   const prevVessel = vessels.get(mmsi);
 
+  // Raw vessel — no classification, frontend handles that
   const vessel = {
     mmsi,
     name: name || `Unknown (${mmsi})`,
@@ -269,12 +253,11 @@ function handleAISMessage(msg) {
     course: pos.Cog ?? 0,
     heading: pos.TrueHeading ?? pos.Cog ?? 0,
     shipType,
-    shipTypeLabel: TANKER_TYPES[shipType] || (isTankerByName ? 'Tanker (by name)' : 'Vessel'),
     navStatus: pos.NavigationalStatus ?? -1,
     lastUpdate: Date.now(),
     flag: meta.country ?? '',
     trail: [
-      ...(prevVessel?.trail || []).slice(-19),
+      ...(prevVessel?.trail || []).slice(-(MAX_TRAIL_POINTS - 1)),
       { lat: meta.latitude, lon: meta.longitude, ts: Date.now() },
     ],
   };
@@ -282,10 +265,10 @@ function handleAISMessage(msg) {
   vessels.set(mmsi, vessel);
   queuePosition(vessel);
 
-  // Detect strait transit
+  // Detect strait transit (for DB recording)
   if (prevVessel) {
-    const crossedEast = prevVessel.lon < 56.5 && vessel.lon >= 56.5;
-    const crossedWest = prevVessel.lon > 56.5 && vessel.lon <= 56.5;
+    const crossedEast = prevVessel.lon < TRANSIT_LONGITUDE && vessel.lon >= TRANSIT_LONGITUDE;
+    const crossedWest = prevVessel.lon > TRANSIT_LONGITUDE && vessel.lon <= TRANSIT_LONGITUDE;
     if (crossedEast || crossedWest) {
       const transit = {
         mmsi, name: vessel.name,
@@ -300,14 +283,14 @@ function handleAISMessage(msg) {
     }
   }
 
-  broadcast({ type: 'vessel_update', vessel, stats: getStats() });
+  broadcast({ type: 'vessel_update', vessel });
 }
 
 // --- Periodic tasks ---
 
-// Clean stale vessels (30 min)
+// Clean stale vessels
 setInterval(() => {
-  const cutoff = Date.now() - 30 * 60 * 1000;
+  const cutoff = Date.now() - STALE_MINUTES * 60 * 1000;
   for (const [mmsi, vessel] of vessels) {
     if (vessel.lastUpdate < cutoff) vessels.delete(mmsi);
   }
@@ -316,16 +299,16 @@ setInterval(() => {
 // Flush positions to DB every 30s
 setInterval(() => flushPositions(), 30_000);
 
-// Update hourly stats every 5 min
+// Update hourly stats every 5 min (for historical DB only)
 setInterval(() => {
-  const stats = getStats();
+  const stats = getInternalStats();
   updateHourlyStats(stats, hourlyEastbound, hourlyWestbound, hourlyMsgCount);
   hourlyEastbound = 0;
   hourlyWestbound = 0;
   hourlyMsgCount = 0;
 }, 300_000);
 
-// Push to GitHub every 60s
+// Push to GitHub
 setInterval(async () => {
   if (!isGitHubConfigured()) return;
   const historicalData = {
@@ -334,31 +317,14 @@ setInterval(async () => {
     topVessels: getTopVessels(30),
     dbStats: getDbStats(),
   };
-  await pushSnapshot(vessels, getStats(), transitHistory, historicalData, getAisHealth());
-
-  // Push news + market data alongside
-  try {
-    const [news, market] = await Promise.allSettled([fetchNews(), fetchOilPrice()]);
-    if (news.status === 'fulfilled' && news.value?.length) {
-      await pushFile('live/news.json', { timestamp: Date.now(), items: news.value });
-    }
-    if (market.status === 'fulfilled' && market.value) {
-      await pushFile('live/market.json', { timestamp: Date.now(), ...market.value });
-    }
-  } catch (err) {
-    console.warn(`[GitHub] News/market push failed: ${err.message}`);
-  }
-}, 60_000);
-
-// Broadcast stats every 10s
-setInterval(() => {
-  broadcast({ type: 'stats', stats: getStats() });
-}, 10_000);
+  await pushSnapshot(vessels, transitHistory, historicalData, getAisHealth());
+}, PUSH_INTERVAL_MS);
 
 // --- Start ---
 server.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);
-  console.log(`GitHub push: ${isGitHubConfigured() ? 'enabled (every 15s)' : 'disabled (set GITHUB_TOKEN + GITHUB_REPO)'}`);
+  console.log(`Config: bbox=${JSON.stringify(BOUNDING_BOX)} stale=${STALE_MINUTES}m trail=${MAX_TRAIL_POINTS}pts push=${PUSH_INTERVAL_MS}ms transit_lon=${TRANSIT_LONGITUDE}`);
+  console.log(`GitHub push: ${isGitHubConfigured() ? `enabled (every ${PUSH_INTERVAL_MS / 1000}s)` : 'disabled (set GITHUB_TOKEN + GITHUB_REPO)'}`);
   connectToAISStream();
 });
 

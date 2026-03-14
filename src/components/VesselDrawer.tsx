@@ -3,6 +3,15 @@ import { useStore } from '../store';
 import { getSpeedColor, formatSpeed, timeAgo } from '../utils/ais';
 
 type SortKey = 'name' | 'speed' | 'lastUpdate';
+type CategoryFilter = 'all' | 'tanker' | 'cargo' | 'passenger' | 'other';
+
+const CATEGORY_LABELS: Record<CategoryFilter, string> = {
+  all: 'All',
+  tanker: 'Tankers',
+  cargo: 'Cargo',
+  passenger: 'Passenger',
+  other: 'Other',
+};
 
 export default function VesselDrawer() {
   const vessels = useStore((s) => s.vessels);
@@ -12,9 +21,19 @@ export default function VesselDrawer() {
   const [sortKey, setSortKey] = useState<SortKey>('speed');
   const [sortAsc, setSortAsc] = useState(false);
   const [filter, setFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
 
   const sorted = useMemo(() => {
     let list = [...vessels.values()];
+    if (categoryFilter !== 'all') {
+      if (categoryFilter === 'tanker') {
+        list = list.filter((v) => v.isTanker || v.category === 'tanker');
+      } else if (categoryFilter === 'other') {
+        list = list.filter((v) => !['tanker', 'cargo', 'passenger'].includes(v.category || ''));
+      } else {
+        list = list.filter((v) => v.category === categoryFilter);
+      }
+    }
     if (filter) {
       const f = filter.toLowerCase();
       list = list.filter(
@@ -88,6 +107,23 @@ export default function VesselDrawer() {
               onChange={(e) => setFilter(e.target.value)}
               className="w-full bg-slate-800/50 border border-slate-700/50 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 transition-colors"
             />
+          </div>
+
+          {/* Category filter */}
+          <div className="flex gap-1 px-3 py-1.5 border-b border-slate-800/50">
+            {(Object.keys(CATEGORY_LABELS) as CategoryFilter[]).map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setCategoryFilter(cat)}
+                className={`text-[10px] px-2 py-0.5 rounded transition-colors ${
+                  categoryFilter === cat
+                    ? 'bg-cyan-500/20 text-cyan-400'
+                    : 'text-slate-500 hover:text-slate-300'
+                }`}
+              >
+                {CATEGORY_LABELS[cat]}
+              </button>
+            ))}
           </div>
 
           {/* Sort */}

@@ -100,7 +100,7 @@ export function flushPositions() {
   if (positionBatch.length === 0) return;
   const insertMany = db.transaction((batch) => {
     for (const v of batch) {
-      insertPosition.run(v.mmsi, v.name, v.lat, v.lon, v.speed, v.course, v.heading, v.shipType, v.shipTypeLabel, v.navStatus, v.flag, v.lastUpdate);
+      insertPosition.run(v.mmsi, v.name, v.lat, v.lon, v.speed, v.course, v.heading, v.shipType, null, v.navStatus, v.flag, v.lastUpdate);
     }
   });
   insertMany(positionBatch);

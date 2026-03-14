@@ -4,7 +4,8 @@ export interface TrailPoint {
   ts: number;
 }
 
-export interface Vessel {
+/** Raw vessel data as received from the server (no derived fields) */
+export interface RawVessel {
   mmsi: string;
   name: string;
   lat: number;
@@ -13,11 +14,17 @@ export interface Vessel {
   course: number;
   heading: number;
   shipType: number;
-  shipTypeLabel: string;
   navStatus: number;
   lastUpdate: number;
   flag: string;
   trail: TrailPoint[];
+}
+
+/** Enriched vessel with frontend-computed classification fields */
+export interface Vessel extends RawVessel {
+  shipTypeLabel: string;
+  category: string;
+  isTanker: boolean;
 }
 
 export interface Transit {
@@ -84,7 +91,7 @@ export interface OilPrice {
 }
 
 export type WSMessage =
-  | { type: 'snapshot'; vessels: Record<string, Vessel>; stats: Stats; transitHistory: Transit[] }
-  | { type: 'vessel_update'; vessel: Vessel; stats: Stats }
+  | { type: 'snapshot'; vessels: Record<string, RawVessel>; stats?: Stats; transitHistory: Transit[] }
+  | { type: 'vessel_update'; vessel: RawVessel; stats?: Stats }
   | { type: 'transit'; transit: Transit }
   | { type: 'stats'; stats: Stats };
