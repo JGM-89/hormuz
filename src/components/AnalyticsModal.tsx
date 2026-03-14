@@ -455,9 +455,9 @@ export default function AnalyticsModal({ open, onClose }: { open: boolean; onClo
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-base animate-fade-in">
+    <div className="fixed inset-0 z-50 bg-base animate-fade-in flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-3 border-b border-border">
+      <div className="flex items-center justify-between px-6 py-3 border-b border-border flex-shrink-0">
         <div>
           <h1 className="text-sm font-bold uppercase tracking-widest">
             <span className="text-accent">Hormuz Strait</span>
@@ -477,477 +477,438 @@ export default function AnalyticsModal({ open, onClose }: { open: boolean; onClo
         </button>
       </div>
 
-      {/* Content */}
-      <div className="p-4 h-[calc(100vh-56px)] overflow-y-auto">
-        <div className="max-w-[900px] mx-auto space-y-6">
+      {/* Content — fills remaining height */}
+      <div className="flex-1 min-h-0 flex flex-col p-4 gap-4">
 
-          {/* ═══ EXECUTIVE SUMMARY ═══ */}
-          <section>
-            <SectionHeader title="Executive Summary" />
-            <AnalysisProse>{execSummary}</AnalysisProse>
-          </section>
+        {/* ═══ EXECUTIVE SUMMARY — full width ═══ */}
+        <section className="flex-shrink-0">
+          <SectionHeader title="Executive Summary" />
+          <AnalysisProse>{execSummary}</AnalysisProse>
+        </section>
 
-          {/* ═══ TRAFFIC INTELLIGENCE ═══ */}
-          <section>
-            <SectionHeader title="Traffic Intelligence" />
+        {/* ═══ 2-COLUMN LAYOUT — fills remaining space ═══ */}
+        <div className="flex-1 min-h-0 grid grid-cols-[3fr_2fr] gap-4">
 
-            {/* Key stats row */}
-            <div className="grid grid-cols-5 gap-2 mb-3">
-              <StatCard label="Total Vessels" value={vessels.size} />
-              <StatCard
-                label="Eastbound"
-                value={directionData.find(d => d.name === 'Eastbound')?.value ?? 0}
-              />
-              <StatCard
-                label="Westbound"
-                value={directionData.find(d => d.name === 'Westbound')?.value ?? 0}
-              />
-              <StatCard
-                label="Anchored"
-                value={directionData.find(d => d.name === 'Anchored')?.value ?? 0}
-              />
-              <StatCard
-                label="Avg Speed"
-                value={speedProfile ? `${speedProfile.mean} kn` : '—'}
-              />
-            </div>
+          {/* ── LEFT COLUMN: Traffic + Vessels ── */}
+          <div className="overflow-y-auto space-y-4 pr-2">
 
-            {/* Trend comparison */}
-            {trends && (
-              <div className="grid grid-cols-4 gap-2 mb-3">
-                {([
-                  { label: 'Vessels', current: trends.vessels.current, avg: trends.vessels.avg },
-                  { label: 'Avg Speed', current: Number(trends.speed.current.toFixed(1)), avg: trends.speed.avg },
-                  { label: 'Eastbound/day', current: trends.eastbound.current, avg: trends.eastbound.avg },
-                  { label: 'Westbound/day', current: trends.westbound.current, avg: trends.westbound.avg },
-                ] as const).map((t) => {
-                  const diff = t.avg > 0 ? ((t.current - t.avg) / t.avg) * 100 : 0;
-                  const isUp = diff > 5;
-                  const isDown = diff < -5;
-                  return (
-                    <div key={t.label} className="bg-surface-1 rounded-sm p-2.5 border border-border">
-                      <div className="text-[10px] text-text-dim mb-1">{t.label}</div>
-                      <div className="flex items-baseline gap-1.5">
-                        <span className="text-sm font-bold text-white">{t.current}</span>
-                        <span className={`text-[10px] font-medium ${isUp ? 'text-status-nominal' : isDown ? 'text-status-crit' : 'text-text-dim'}`}>
-                          {isUp ? '\u25B2' : isDown ? '\u25BC' : '\u25CF'} {Math.abs(Math.round(diff))}%
-                        </span>
-                      </div>
-                      <div className="text-[10px] text-text-dim">30d avg: {t.avg}</div>
-                    </div>
-                  );
-                })}
+            {/* TRAFFIC INTELLIGENCE */}
+            <section>
+              <SectionHeader title="Traffic Intelligence" />
+
+              {/* Key stats row */}
+              <div className="grid grid-cols-5 gap-2 mb-3">
+                <StatCard label="Total Vessels" value={vessels.size} />
+                <StatCard label="Eastbound" value={directionData.find(d => d.name === 'Eastbound')?.value ?? 0} />
+                <StatCard label="Westbound" value={directionData.find(d => d.name === 'Westbound')?.value ?? 0} />
+                <StatCard label="Anchored" value={directionData.find(d => d.name === 'Anchored')?.value ?? 0} />
+                <StatCard label="Avg Speed" value={speedProfile ? `${speedProfile.mean} kn` : '—'} />
               </div>
-            )}
 
-            <AnalysisProse>{trafficAnalysis}</AnalysisProse>
-
-            {/* Charts: Speed + Direction side by side */}
-            <div className="grid grid-cols-2 gap-2 mt-3">
-              <ChartCard title="Speed Distribution (knots)">
-                <ResponsiveContainer width="100%" height={160}>
-                  <BarChart data={speedData} margin={{ top: 8, right: 8, bottom: 0, left: -10 }}>
-                    <XAxis dataKey="range" tick={axisProps} axisLine={false} tickLine={false} />
-                    <YAxis tick={axisProps} axisLine={false} tickLine={false} allowDecimals={false} />
-                    <Tooltip contentStyle={tooltipStyle} />
-                    <Bar dataKey="count" fill="#00b4d8" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartCard>
-
-              <ChartCard title="Traffic Direction">
-                <div className="flex items-center justify-center gap-6">
-                  <ResponsiveContainer width="45%" height={140}>
-                    <PieChart>
-                      <Pie data={directionData} cx="50%" cy="50%" innerRadius={30} outerRadius={50} paddingAngle={3} dataKey="value">
-                        {directionData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="flex flex-col gap-2">
-                    {directionData.map((d, i) => (
-                      <div key={d.name} className="flex items-center gap-2">
-                        <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                        <span className="text-xs text-text-secondary">
-                          {d.name}: <span className="text-text-primary font-semibold">{d.value}</span>
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </ChartCard>
-            </div>
-
-            {/* Speed Profile */}
-            {speedProfile && (
-              <div className="mt-2">
-                <ChartCard title="Speed Profile (Moving Vessels)">
-                  <div className="flex items-center gap-6">
-                    <div className="grid grid-cols-5 gap-3 flex-1">
-                      {[
-                        { label: 'Mean', value: `${speedProfile.mean} kn` },
-                        { label: 'Median', value: `${speedProfile.median} kn` },
-                        { label: 'Std Dev', value: `\u00B1${speedProfile.stdDev} kn` },
-                        { label: 'Min', value: `${speedProfile.min} kn` },
-                        { label: 'Max', value: `${speedProfile.max} kn` },
-                      ].map((s) => (
-                        <div key={s.label} className="text-center">
-                          <div className="text-sm font-bold text-white">{s.value}</div>
-                          <div className="text-[10px] text-text-dim">{s.label}</div>
+              {/* Trend comparison */}
+              {trends && (
+                <div className="grid grid-cols-4 gap-2 mb-3">
+                  {([
+                    { label: 'Vessels', current: trends.vessels.current, avg: trends.vessels.avg },
+                    { label: 'Avg Speed', current: Number(trends.speed.current.toFixed(1)), avg: trends.speed.avg },
+                    { label: 'Eastbound/day', current: trends.eastbound.current, avg: trends.eastbound.avg },
+                    { label: 'Westbound/day', current: trends.westbound.current, avg: trends.westbound.avg },
+                  ] as const).map((t) => {
+                    const diff = t.avg > 0 ? ((t.current - t.avg) / t.avg) * 100 : 0;
+                    const isUp = diff > 5;
+                    const isDown = diff < -5;
+                    return (
+                      <div key={t.label} className="bg-surface-1 rounded-sm p-2.5 border border-border">
+                        <div className="text-[10px] text-text-dim mb-1">{t.label}</div>
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-sm font-bold text-white">{t.current}</span>
+                          <span className={`text-[10px] font-medium ${isUp ? 'text-status-nominal' : isDown ? 'text-status-crit' : 'text-text-dim'}`}>
+                            {isUp ? '\u25B2' : isDown ? '\u25BC' : '\u25CF'} {Math.abs(Math.round(diff))}%
+                          </span>
                         </div>
-                      ))}
-                    </div>
-                    <div className="w-48">
-                      <div className="text-[10px] text-text-dim mb-1.5">Normal Range ({speedProfile.count} vessels)</div>
-                      <div className="relative h-3 bg-surface-1 rounded-sm overflow-hidden border border-border">
-                        <div
-                          className="absolute h-full bg-accent/30 rounded-sm"
-                          style={{
-                            left: `${(Math.max(0, speedProfile.normalLow) / 20) * 100}%`,
-                            width: `${((speedProfile.normalHigh - Math.max(0, speedProfile.normalLow)) / 20) * 100}%`,
-                          }}
-                        />
-                        <div
-                          className="absolute h-full w-0.5 bg-accent"
-                          style={{ left: `${(speedProfile.mean / 20) * 100}%` }}
-                        />
+                        <div className="text-[10px] text-text-dim">30d avg: {t.avg}</div>
                       </div>
-                      <div className="flex justify-between text-[9px] text-text-dim mt-0.5">
-                        <span>0</span>
-                        <span className="text-accent">{speedProfile.normalLow}–{speedProfile.normalHigh} kn</span>
-                        <span>20</span>
-                      </div>
-                    </div>
-                  </div>
-                </ChartCard>
-              </div>
-            )}
+                    );
+                  })}
+                </div>
+              )}
 
-            {/* Daily Transits (30d) */}
-            {dailyTransitData.length > 0 && (
-              <div className="mt-2">
-                <ChartCard title="Daily Transits (30d)">
+              <AnalysisProse>{trafficAnalysis}</AnalysisProse>
+
+              {/* Charts: Speed + Direction side by side */}
+              <div className="grid grid-cols-2 gap-2 mt-3">
+                <ChartCard title="Speed Distribution (knots)">
                   <ResponsiveContainer width="100%" height={160}>
-                    <BarChart data={dailyTransitData} margin={{ top: 8, right: 8, bottom: 0, left: -10 }}>
-                      <XAxis dataKey="date" tick={axisProps} axisLine={false} tickLine={false} interval={4} />
+                    <BarChart data={speedData} margin={{ top: 8, right: 8, bottom: 0, left: -10 }}>
+                      <XAxis dataKey="range" tick={axisProps} axisLine={false} tickLine={false} />
                       <YAxis tick={axisProps} axisLine={false} tickLine={false} allowDecimals={false} />
                       <Tooltip contentStyle={tooltipStyle} />
-                      <Legend wrapperStyle={{ fontSize: 10, fontFamily: '"JetBrains Mono", monospace' }} />
-                      <Bar dataKey="eastbound" fill="#00b4d8" radius={[2, 2, 0, 0]} stackId="a" />
-                      <Bar dataKey="westbound" fill="#f59e0b" radius={[2, 2, 0, 0]} stackId="a" />
+                      <Bar dataKey="count" fill="#00b4d8" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </ChartCard>
+
+                <ChartCard title="Traffic Direction">
+                  <div className="flex items-center justify-center gap-6">
+                    <ResponsiveContainer width="45%" height={140}>
+                      <PieChart>
+                        <Pie data={directionData} cx="50%" cy="50%" innerRadius={30} outerRadius={50} paddingAngle={3} dataKey="value">
+                          {directionData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                        </Pie>
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="flex flex-col gap-2">
+                      {directionData.map((d, i) => (
+                        <div key={d.name} className="flex items-center gap-2">
+                          <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                          <span className="text-xs text-text-secondary">
+                            {d.name}: <span className="text-text-primary font-semibold">{d.value}</span>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </ChartCard>
               </div>
-            )}
 
-            {/* Transit Timeline (24h) */}
-            <div className="mt-2">
-              <ChartCard title="Strait Transits (24h)">
-                <ResponsiveContainer width="100%" height={140}>
-                  <AreaChart data={transitTimeline} margin={{ top: 8, right: 8, bottom: 0, left: -10 }}>
-                    <XAxis dataKey="hour" tick={axisProps} axisLine={false} tickLine={false} interval={3} />
-                    <YAxis tick={axisProps} axisLine={false} tickLine={false} allowDecimals={false} />
-                    <Tooltip contentStyle={tooltipStyle} />
-                    <Area type="monotone" dataKey="count" stroke="#ffab00" fill="#ffab00" fillOpacity={0.15} strokeWidth={2} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </ChartCard>
-            </div>
+              {/* Speed Profile */}
+              {speedProfile && (
+                <div className="mt-2">
+                  <ChartCard title="Speed Profile (Moving Vessels)">
+                    <div className="flex items-center gap-6">
+                      <div className="grid grid-cols-5 gap-3 flex-1">
+                        {[
+                          { label: 'Mean', value: `${speedProfile.mean} kn` },
+                          { label: 'Median', value: `${speedProfile.median} kn` },
+                          { label: 'Std Dev', value: `\u00B1${speedProfile.stdDev} kn` },
+                          { label: 'Min', value: `${speedProfile.min} kn` },
+                          { label: 'Max', value: `${speedProfile.max} kn` },
+                        ].map((s) => (
+                          <div key={s.label} className="text-center">
+                            <div className="text-sm font-bold text-white">{s.value}</div>
+                            <div className="text-[10px] text-text-dim">{s.label}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex-1 max-w-[40%]">
+                        <div className="text-[10px] text-text-dim mb-1.5">Normal Range ({speedProfile.count} vessels)</div>
+                        <div className="relative h-3 bg-surface-1 rounded-sm overflow-hidden border border-border">
+                          <div
+                            className="absolute h-full bg-accent/30 rounded-sm"
+                            style={{
+                              left: `${(Math.max(0, speedProfile.normalLow) / 20) * 100}%`,
+                              width: `${((speedProfile.normalHigh - Math.max(0, speedProfile.normalLow)) / 20) * 100}%`,
+                            }}
+                          />
+                          <div
+                            className="absolute h-full w-0.5 bg-accent"
+                            style={{ left: `${(speedProfile.mean / 20) * 100}%` }}
+                          />
+                        </div>
+                        <div className="flex justify-between text-[9px] text-text-dim mt-0.5">
+                          <span>0</span>
+                          <span className="text-accent">{speedProfile.normalLow}–{speedProfile.normalHigh} kn</span>
+                          <span>20</span>
+                        </div>
+                      </div>
+                    </div>
+                  </ChartCard>
+                </div>
+              )}
 
-            {/* Peak Vessels & Avg Speed (30d) */}
-            {dailyStatsData.length > 0 && (
+              {/* Daily Transits (30d) */}
+              {dailyTransitData.length > 0 && (
+                <div className="mt-2">
+                  <ChartCard title="Daily Transits (30d)">
+                    <ResponsiveContainer width="100%" height={160}>
+                      <BarChart data={dailyTransitData} margin={{ top: 8, right: 8, bottom: 0, left: -10 }}>
+                        <XAxis dataKey="date" tick={axisProps} axisLine={false} tickLine={false} interval={4} />
+                        <YAxis tick={axisProps} axisLine={false} tickLine={false} allowDecimals={false} />
+                        <Tooltip contentStyle={tooltipStyle} />
+                        <Legend wrapperStyle={{ fontSize: 10, fontFamily: '"JetBrains Mono", monospace' }} />
+                        <Bar dataKey="eastbound" fill="#00b4d8" radius={[2, 2, 0, 0]} stackId="a" />
+                        <Bar dataKey="westbound" fill="#f59e0b" radius={[2, 2, 0, 0]} stackId="a" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </ChartCard>
+                </div>
+              )}
+
+              {/* Transit Timeline (24h) */}
               <div className="mt-2">
-                <ChartCard title="Peak Vessels & Avg Speed (30d)">
-                  <ResponsiveContainer width="100%" height={160}>
-                    <LineChart data={dailyStatsData} margin={{ top: 8, right: 8, bottom: 0, left: -10 }}>
-                      <XAxis dataKey="date" tick={axisProps} axisLine={false} tickLine={false} interval={4} />
-                      <YAxis tick={axisProps} axisLine={false} tickLine={false} />
+                <ChartCard title="Strait Transits (24h)">
+                  <ResponsiveContainer width="100%" height={140}>
+                    <AreaChart data={transitTimeline} margin={{ top: 8, right: 8, bottom: 0, left: -10 }}>
+                      <XAxis dataKey="hour" tick={axisProps} axisLine={false} tickLine={false} interval={3} />
+                      <YAxis tick={axisProps} axisLine={false} tickLine={false} allowDecimals={false} />
                       <Tooltip contentStyle={tooltipStyle} />
-                      <Legend wrapperStyle={{ fontSize: 10, fontFamily: '"JetBrains Mono", monospace' }} />
-                      <Line type="monotone" dataKey="peakVessels" stroke="#00e676" strokeWidth={2} dot={false} name="Peak Vessels" />
-                      <Line type="monotone" dataKey="avgSpeed" stroke="#7c4dff" strokeWidth={2} dot={false} name="Avg Speed (kn)" />
-                    </LineChart>
+                      <Area type="monotone" dataKey="count" stroke="#ffab00" fill="#ffab00" fillOpacity={0.15} strokeWidth={2} />
+                    </AreaChart>
                   </ResponsiveContainer>
                 </ChartCard>
               </div>
-            )}
-          </section>
 
-          {/* ═══ VESSEL INTELLIGENCE ═══ */}
-          <section>
-            <SectionHeader title="Vessel Intelligence" />
+              {/* Peak Vessels & Avg Speed (30d) */}
+              {dailyStatsData.length > 0 && (
+                <div className="mt-2">
+                  <ChartCard title="Peak Vessels & Avg Speed (30d)">
+                    <ResponsiveContainer width="100%" height={160}>
+                      <LineChart data={dailyStatsData} margin={{ top: 8, right: 8, bottom: 0, left: -10 }}>
+                        <XAxis dataKey="date" tick={axisProps} axisLine={false} tickLine={false} interval={4} />
+                        <YAxis tick={axisProps} axisLine={false} tickLine={false} />
+                        <Tooltip contentStyle={tooltipStyle} />
+                        <Legend wrapperStyle={{ fontSize: 10, fontFamily: '"JetBrains Mono", monospace' }} />
+                        <Line type="monotone" dataKey="peakVessels" stroke="#00e676" strokeWidth={2} dot={false} name="Peak Vessels" />
+                        <Line type="monotone" dataKey="avgSpeed" stroke="#7c4dff" strokeWidth={2} dot={false} name="Avg Speed (kn)" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </ChartCard>
+                </div>
+              )}
+            </section>
 
-            <div className="grid grid-cols-2 gap-2">
-              {/* Fleet Composition */}
-              <ChartCard title="Fleet Composition">
-                {fleetComposition.length > 0 ? (
-                  <div className="space-y-1.5">
-                    {fleetComposition.map((d, i) => (
-                      <div key={d.category} className="flex items-center gap-2">
-                        <span className="text-xs text-text-secondary w-24 truncate">{d.category}</span>
-                        <div className="flex-1 h-4 bg-surface-1 rounded-sm overflow-hidden">
-                          <div
-                            className="h-full rounded-sm transition-all"
-                            style={{
-                              width: `${(d.count / (fleetComposition[0]?.count || 1)) * 100}%`,
-                              backgroundColor: COLORS[i % COLORS.length],
-                              opacity: 0.8,
-                            }}
-                          />
+            {/* VESSEL INTELLIGENCE */}
+            <section>
+              <SectionHeader title="Vessel Intelligence" />
+
+              <div className="grid grid-cols-2 gap-2">
+                <ChartCard title="Fleet Composition">
+                  {fleetComposition.length > 0 ? (
+                    <div className="space-y-1.5">
+                      {fleetComposition.map((d, i) => (
+                        <div key={d.category} className="flex items-center gap-2">
+                          <span className="text-xs text-text-secondary w-24 truncate">{d.category}</span>
+                          <div className="flex-1 h-4 bg-surface-1 rounded-sm overflow-hidden">
+                            <div className="h-full rounded-sm transition-all" style={{ width: `${(d.count / (fleetComposition[0]?.count || 1)) * 100}%`, backgroundColor: COLORS[i % COLORS.length], opacity: 0.8 }} />
+                          </div>
+                          <span className="text-xs font-data font-semibold text-text-primary">{d.count}</span>
                         </div>
-                        <span className="text-xs font-data font-semibold text-text-primary w-8 text-right">{d.count}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-xs text-text-dim text-center py-6">No vessel data</div>
-                )}
-              </ChartCard>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-text-dim text-center py-6">No vessel data</div>
+                  )}
+                </ChartCard>
 
-              {/* Flag State Distribution */}
-              <ChartCard title="Vessels by Flag">
-                {flagData.length > 0 ? (
-                  <div className="space-y-1.5">
-                    {flagData.map((d, i) => (
-                      <div key={d.flag} className="flex items-center gap-2">
-                        <span className="text-xs text-text-secondary w-16 truncate">{d.flag}</span>
-                        <div className="flex-1 h-4 bg-surface-1 rounded-sm overflow-hidden">
-                          <div
-                            className="h-full rounded-sm transition-all"
-                            style={{
-                              width: `${(d.count / (flagData[0]?.count || 1)) * 100}%`,
-                              backgroundColor: COLORS[i % COLORS.length],
-                              opacity: 0.8,
-                            }}
-                          />
+                <ChartCard title="Vessels by Flag">
+                  {flagData.length > 0 ? (
+                    <div className="space-y-1.5">
+                      {flagData.map((d, i) => (
+                        <div key={d.flag} className="flex items-center gap-2">
+                          <span className="text-xs text-text-secondary w-16 truncate">{d.flag}</span>
+                          <div className="flex-1 h-4 bg-surface-1 rounded-sm overflow-hidden">
+                            <div className="h-full rounded-sm transition-all" style={{ width: `${(d.count / (flagData[0]?.count || 1)) * 100}%`, backgroundColor: COLORS[i % COLORS.length], opacity: 0.8 }} />
+                          </div>
+                          <span className="text-xs font-data font-semibold text-text-primary">{d.count}</span>
                         </div>
-                        <span className="text-xs font-data font-semibold text-text-primary w-6 text-right">{d.count}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-xs text-text-dim text-center py-6">No vessel data</div>
-                )}
-              </ChartCard>
-            </div>
-
-            {/* Top Vessels */}
-            {historicalData?.topVessels && historicalData.topVessels.length > 0 && (
-              <div className="mt-2">
-                <ChartCard title="Most Frequent Vessels (30d)">
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                    {historicalData.topVessels.slice(0, 10).map((v, i) => (
-                      <div key={v.mmsi} className="flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2">
-                          <span className="text-text-dim w-5">{i + 1}.</span>
-                          <span className="text-text-primary truncate max-w-[200px]">{v.name}</span>
-                          <span className="text-text-dim">{v.flag}</span>
-                        </div>
-                        <span className="text-accent font-data font-semibold">{v.transit_count}x</span>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-text-dim text-center py-6">No vessel data</div>
+                  )}
                 </ChartCard>
               </div>
-            )}
-          </section>
 
-          {/* ═══ ANOMALIES & ALERTS ═══ */}
-          <section>
-            <SectionHeader title="Anomalies & Alerts" />
-
-            <div className="flex items-center gap-2 mb-2">
-              <span className={`w-2 h-2 rounded-full ${anomalies.length > 0 ? 'bg-status-warn animate-pulse' : 'bg-status-nominal'}`} />
-              <span className="text-xs text-text-secondary">
-                {anomalies.length > 0
-                  ? `${anomalies.length} anomal${anomalies.length === 1 ? 'y' : 'ies'} detected`
-                  : 'No anomalies — strait operating normally'}
-              </span>
-            </div>
-
-            {anomalies.length > 0 && (
-              <div className="bg-surface-1 rounded-sm border border-border p-2.5 mb-3">
-                <div className="space-y-1.5">
-                  {anomalies.map((a, i) => (
-                    <div key={i} className="flex items-center gap-2 text-xs">
-                      <span className={`w-1.5 h-1.5 rounded-sm flex-shrink-0 ${a.severity === 'alert' ? 'bg-status-crit' : 'bg-status-warn'}`} />
-                      <span className="text-text-secondary w-28 flex-shrink-0">{a.type}</span>
-                      <span className="text-text-primary truncate">{a.vessel}</span>
-                      <span className="text-text-dim ml-auto flex-shrink-0">{a.detail}</span>
+              {historicalData?.topVessels && historicalData.topVessels.length > 0 && (
+                <div className="mt-2">
+                  <ChartCard title="Most Frequent Vessels (30d)">
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                      {historicalData.topVessels.slice(0, 10).map((v, i) => (
+                        <div key={v.mmsi} className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2">
+                            <span className="text-text-dim w-5">{i + 1}.</span>
+                            <span className="text-text-primary truncate">{v.name}</span>
+                            <span className="text-text-dim">{v.flag}</span>
+                          </div>
+                          <span className="text-accent font-data font-semibold">{v.transit_count}x</span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  </ChartCard>
                 </div>
-              </div>
+              )}
+            </section>
+
+            {/* DATABASE & COVERAGE */}
+            {historicalData?.dbStats && (
+              <section>
+                <SectionHeader title="Database & Coverage" />
+                <div className="grid grid-cols-3 gap-2">
+                  <StatCard label="Positions Recorded" value={historicalData.dbStats.positions.toLocaleString()} />
+                  <StatCard label="Transits Detected" value={historicalData.dbStats.transits.toLocaleString()} />
+                  <StatCard label="Collecting Since" value={historicalData.dbStats.oldestRecord ? new Date(historicalData.dbStats.oldestRecord).toLocaleDateString() : 'N/A'} />
+                </div>
+              </section>
             )}
+          </div>
 
-            <AnalysisProse>{anomalyAnalysis}</AnalysisProse>
-          </section>
+          {/* ── RIGHT COLUMN: Markets + Weather + Alerts ── */}
+          <div className="overflow-y-auto space-y-4 pr-2">
 
-          {/* ═══ COMMODITY & RISK INTELLIGENCE ═══ */}
-          <section>
-            <SectionHeader title="Commodity & Risk Intelligence" />
+            {/* COMMODITY & RISK INTELLIGENCE */}
+            <section>
+              <SectionHeader title="Commodity & Risk Intelligence" />
 
-            {/* Hormuz Risk Premium */}
-            <div className={`bg-surface-1 rounded-sm border p-3 mb-3 ${
-              riskSeverity === 'crit' ? 'border-status-crit/50' :
-              riskSeverity === 'warn' ? 'border-status-warn/50' : 'border-border'
-            }`}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-[10px] text-text-dim uppercase tracking-wider mb-1">Hormuz Risk Premium</div>
-                  <div className="flex items-baseline gap-2">
-                    <span className={`text-lg font-bold ${
-                      riskSeverity === 'crit' ? 'text-status-crit' :
-                      riskSeverity === 'warn' ? 'text-status-warn' : 'text-status-nominal'
-                    }`}>
-                      {riskPremium.dollarImpact >= 0 ? '+' : ''}${riskPremium.dollarImpact.toFixed(2)} / bbl
-                    </span>
-                    <span className="text-xs text-text-dim">
-                      ({riskPremium.percentImpact >= 0 ? '+' : ''}{riskPremium.percentImpact.toFixed(1)}%)
+              {/* Risk Premium */}
+              <div className={`bg-surface-1 rounded-sm border p-3 mb-3 ${
+                riskSeverity === 'crit' ? 'border-status-crit/50' :
+                riskSeverity === 'warn' ? 'border-status-warn/50' : 'border-border'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-[10px] text-text-dim uppercase tracking-wider mb-1">Hormuz Risk Premium</div>
+                    <div className="flex items-baseline gap-2">
+                      <span className={`text-lg font-bold ${
+                        riskSeverity === 'crit' ? 'text-status-crit' :
+                        riskSeverity === 'warn' ? 'text-status-warn' : 'text-status-nominal'
+                      }`}>
+                        {riskPremium.dollarImpact >= 0 ? '+' : ''}${riskPremium.dollarImpact.toFixed(2)} / bbl
+                      </span>
+                      <span className="text-xs text-text-dim">
+                        ({riskPremium.percentImpact >= 0 ? '+' : ''}{riskPremium.percentImpact.toFixed(1)}%)
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2.5 h-2.5 rounded-full ${
+                      riskSeverity === 'crit' ? 'bg-status-crit animate-pulse' :
+                      riskSeverity === 'warn' ? 'bg-status-warn' : 'bg-status-nominal'
+                    }`} />
+                    <span className="text-xs text-text-dim uppercase">
+                      {riskSeverity === 'crit' ? 'Critical' : riskSeverity === 'warn' ? 'Elevated' : 'Nominal'}
                     </span>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className={`w-2.5 h-2.5 rounded-full ${
-                    riskSeverity === 'crit' ? 'bg-status-crit animate-pulse' :
-                    riskSeverity === 'warn' ? 'bg-status-warn' : 'bg-status-nominal'
-                  }`} />
-                  <span className="text-xs text-text-dim uppercase">
-                    {riskSeverity === 'crit' ? 'Critical' : riskSeverity === 'warn' ? 'Elevated' : 'Nominal'}
-                  </span>
-                </div>
+                <div className="text-[10px] text-text-dim mt-1">Weighted avg. commodity movement × strait sensitivity</div>
               </div>
-              <div className="text-[10px] text-text-dim mt-1">Weighted avg. commodity movement × strait sensitivity</div>
-            </div>
 
-            {/* Commodity Table */}
-            {sortedCommodities.length > 0 && (
-              <div className="bg-surface-1 rounded-sm border border-border overflow-hidden mb-3">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left text-[10px] text-text-dim uppercase tracking-wider p-2">Commodity</th>
-                      <th className="text-right text-[10px] text-text-dim uppercase tracking-wider p-2">Price</th>
-                      <th className="text-right text-[10px] text-text-dim uppercase tracking-wider p-2">24h</th>
-                      <th className="text-right text-[10px] text-text-dim uppercase tracking-wider p-2">High</th>
-                      <th className="text-right text-[10px] text-text-dim uppercase tracking-wider p-2">Low</th>
-                      <th className="text-right text-[10px] text-text-dim uppercase tracking-wider p-2">Sensitivity</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedCommodities.map((c) => (
-                      <tr key={c.symbol} className="border-b border-border/50 hover:bg-surface-2/50">
-                        <td className="p-2">
-                          <div className="text-text-primary font-medium">{c.shortName}</div>
-                          <div className="text-[10px] text-text-dim">{c.unit}</div>
-                        </td>
-                        <td className="p-2 text-right font-data text-text-primary">
-                          {formatCommodityPrice(c.price, c.symbol)}
-                        </td>
-                        <td className={`p-2 text-right font-data font-semibold ${
-                          c.changePercent > 0 ? 'text-status-nominal' : c.changePercent < 0 ? 'text-status-crit' : 'text-text-dim'
-                        }`}>
-                          {c.changePercent > 0 ? '+' : ''}{c.changePercent.toFixed(2)}%
-                        </td>
-                        <td className="p-2 text-right font-data text-text-dim">
-                          {formatCommodityPrice(c.high24h, c.symbol)}
-                        </td>
-                        <td className="p-2 text-right font-data text-text-dim">
-                          {formatCommodityPrice(c.low24h, c.symbol)}
-                        </td>
-                        <td className="p-2 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <div className="w-12 h-1.5 bg-surface-2 rounded-full overflow-hidden">
-                              <div
-                                className="h-full rounded-full"
-                                style={{
-                                  width: `${c.hormuzSensitivity * 100}%`,
-                                  backgroundColor: c.hormuzSensitivity >= 0.8 ? '#ff1744' : c.hormuzSensitivity >= 0.5 ? '#ffab00' : '#4a5e78',
-                                }}
-                              />
-                            </div>
-                            <span className="text-text-dim font-data w-8 text-right">{Math.round(c.hormuzSensitivity * 100)}%</span>
-                          </div>
-                        </td>
+              {/* Commodity Table */}
+              {sortedCommodities.length > 0 && (
+                <div className="bg-surface-1 rounded-sm border border-border overflow-hidden mb-3">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="text-left text-[10px] text-text-dim uppercase tracking-wider p-2">Commodity</th>
+                        <th className="text-right text-[10px] text-text-dim uppercase tracking-wider p-2">Price</th>
+                        <th className="text-right text-[10px] text-text-dim uppercase tracking-wider p-2">24h</th>
+                        <th className="text-right text-[10px] text-text-dim uppercase tracking-wider p-2">Sensitivity</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            <AnalysisProse>{marketAnalysis}</AnalysisProse>
-          </section>
-
-          {/* ═══ MARITIME CONDITIONS ═══ */}
-          <section>
-            <SectionHeader title="Maritime Conditions" />
-
-            {weather.current ? (
-              <>
-                {/* Current conditions grid */}
-                <div className="grid grid-cols-6 gap-2 mb-3">
-                  <StatCard label="Wind" value={`${weather.current.windSpeed} kn`} />
-                  <StatCard label="Gusts" value={`${weather.current.windGusts} kn`} />
-                  <StatCard label="Waves" value={`${weather.current.waveHeight}m`} />
-                  <StatCard label="Visibility" value={`${weather.current.visibility} km`} />
-                  <StatCard label="Beaufort" value={weather.current.beaufort} />
-                  <StatCard
-                    label="Passage Risk"
-                    value={weather.current.passageRisk.toUpperCase()}
-                    valueColor={
-                      weather.current.passageRisk === 'low' ? 'text-status-nominal' :
-                      weather.current.passageRisk === 'moderate' ? 'text-status-warn' :
-                      'text-status-crit'
-                    }
-                  />
+                    </thead>
+                    <tbody>
+                      {sortedCommodities.map((c) => (
+                        <tr key={c.symbol} className="border-b border-border/50 hover:bg-surface-2/50">
+                          <td className="p-2">
+                            <div className="text-text-primary font-medium">{c.shortName}</div>
+                            <div className="text-[10px] text-text-dim">{c.unit}</div>
+                          </td>
+                          <td className="p-2 text-right font-data text-text-primary">
+                            {formatCommodityPrice(c.price, c.symbol)}
+                          </td>
+                          <td className={`p-2 text-right font-data font-semibold ${
+                            c.changePercent > 0 ? 'text-status-nominal' : c.changePercent < 0 ? 'text-status-crit' : 'text-text-dim'
+                          }`}>
+                            {c.changePercent > 0 ? '+' : ''}{c.changePercent.toFixed(2)}%
+                          </td>
+                          <td className="p-2 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <div className="w-12 h-1.5 bg-surface-2 rounded-full overflow-hidden">
+                                <div className="h-full rounded-full" style={{ width: `${c.hormuzSensitivity * 100}%`, backgroundColor: c.hormuzSensitivity >= 0.8 ? '#ff1744' : c.hormuzSensitivity >= 0.5 ? '#ffab00' : '#4a5e78' }} />
+                              </div>
+                              <span className="text-text-dim font-data">{Math.round(c.hormuzSensitivity * 100)}%</span>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
+              )}
 
-                {/* 7-day forecast */}
-                {weather.daily.length > 0 && (
-                  <div className="grid grid-cols-7 gap-1.5 mb-3">
-                    {weather.daily.map((day) => (
-                      <div key={day.date} className={`bg-surface-1 rounded-sm border p-2 text-center ${
-                        day.passageRisk === 'high' || day.passageRisk === 'severe' ? 'border-status-crit/40' : 'border-border'
-                      }`}>
-                        <div className="text-[10px] text-text-dim mb-1">{day.label}</div>
-                        <div className="text-xs font-bold text-white">{day.windSpeedMax} kn</div>
-                        <div className="text-[10px] text-text-dim">{day.waveHeightMax}m</div>
-                        <div className={`text-[9px] mt-1 uppercase font-medium ${
-                          day.passageRisk === 'low' ? 'text-status-nominal' :
-                          day.passageRisk === 'moderate' ? 'text-status-warn' :
-                          'text-status-crit'
+              <AnalysisProse>{marketAnalysis}</AnalysisProse>
+            </section>
+
+            {/* MARITIME CONDITIONS */}
+            <section>
+              <SectionHeader title="Maritime Conditions" />
+
+              {weather.current ? (
+                <>
+                  <div className="grid grid-cols-3 gap-2 mb-3">
+                    <StatCard label="Wind" value={`${weather.current.windSpeed} kn`} />
+                    <StatCard label="Gusts" value={`${weather.current.windGusts} kn`} />
+                    <StatCard label="Waves" value={`${weather.current.waveHeight}m`} />
+                    <StatCard label="Visibility" value={`${weather.current.visibility} km`} />
+                    <StatCard label="Beaufort" value={weather.current.beaufort} />
+                    <StatCard
+                      label="Passage Risk"
+                      value={weather.current.passageRisk.toUpperCase()}
+                      valueColor={
+                        weather.current.passageRisk === 'low' ? 'text-status-nominal' :
+                        weather.current.passageRisk === 'moderate' ? 'text-status-warn' :
+                        'text-status-crit'
+                      }
+                    />
+                  </div>
+
+                  {weather.daily.length > 0 && (
+                    <div className="grid grid-cols-5 gap-1.5 mb-3">
+                      {weather.daily.map((day) => (
+                        <div key={day.date} className={`bg-surface-1 rounded-sm border p-2 text-center ${
+                          day.passageRisk === 'high' || day.passageRisk === 'severe' ? 'border-status-crit/40' : 'border-border'
                         }`}>
-                          {day.passageRisk}
+                          <div className="text-[10px] text-text-dim mb-1">{day.label}</div>
+                          <div className="text-xs font-bold text-white">{day.windSpeedMax} kn</div>
+                          <div className="text-[10px] text-text-dim">{day.waveHeightMax}m</div>
+                          <div className={`text-[9px] mt-1 uppercase font-medium ${
+                            day.passageRisk === 'low' ? 'text-status-nominal' :
+                            day.passageRisk === 'moderate' ? 'text-status-warn' :
+                            'text-status-crit'
+                          }`}>
+                            {day.passageRisk}
+                          </div>
                         </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <AnalysisProse>{weatherAssessment}</AnalysisProse>
+                </>
+              ) : (
+                <div className="text-xs text-text-dim py-4">Weather data loading...</div>
+              )}
+            </section>
+
+            {/* ANOMALIES & ALERTS */}
+            <section>
+              <SectionHeader title="Anomalies & Alerts" />
+
+              <div className="flex items-center gap-2 mb-2">
+                <span className={`w-2 h-2 rounded-full ${anomalies.length > 0 ? 'bg-status-warn animate-pulse' : 'bg-status-nominal'}`} />
+                <span className="text-xs text-text-secondary">
+                  {anomalies.length > 0
+                    ? `${anomalies.length} anomal${anomalies.length === 1 ? 'y' : 'ies'} detected`
+                    : 'No anomalies — strait operating normally'}
+                </span>
+              </div>
+
+              {anomalies.length > 0 && (
+                <div className="bg-surface-1 rounded-sm border border-border p-2.5 mb-3">
+                  <div className="space-y-1.5">
+                    {anomalies.map((a, i) => (
+                      <div key={i} className="flex items-center gap-2 text-xs">
+                        <span className={`w-1.5 h-1.5 rounded-sm flex-shrink-0 ${a.severity === 'alert' ? 'bg-status-crit' : 'bg-status-warn'}`} />
+                        <span className="text-text-secondary flex-shrink-0">{a.type}</span>
+                        <span className="text-text-primary truncate">{a.vessel}</span>
+                        <span className="text-text-dim ml-auto flex-shrink-0">{a.detail}</span>
                       </div>
                     ))}
                   </div>
-                )}
+                </div>
+              )}
 
-                <AnalysisProse>{weatherAssessment}</AnalysisProse>
-              </>
-            ) : (
-              <div className="text-xs text-text-dim py-4">Weather data loading...</div>
-            )}
-          </section>
-
-          {/* ═══ DATABASE & COVERAGE ═══ */}
-          {historicalData?.dbStats && (
-            <section>
-              <SectionHeader title="Database & Coverage" />
-              <div className="grid grid-cols-3 gap-2">
-                <StatCard label="Positions Recorded" value={historicalData.dbStats.positions.toLocaleString()} />
-                <StatCard label="Transits Detected" value={historicalData.dbStats.transits.toLocaleString()} />
-                <StatCard
-                  label="Collecting Since"
-                  value={historicalData.dbStats.oldestRecord ? new Date(historicalData.dbStats.oldestRecord).toLocaleDateString() : 'N/A'}
-                />
-              </div>
+              <AnalysisProse>{anomalyAnalysis}</AnalysisProse>
             </section>
-          )}
-
+          </div>
         </div>
       </div>
     </div>

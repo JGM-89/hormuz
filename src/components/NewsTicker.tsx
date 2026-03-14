@@ -4,7 +4,7 @@ import { Newspaper } from 'lucide-react';
 import type { NewsItem } from '../types';
 
 const RSS_FEEDS = [
-  { url: 'https://news.google.com/rss/search?q=%22strait+of+hormuz%22&hl=en-US&gl=US&ceid=US:en', source: 'Google News' },
+  { url: 'https://news.google.com/rss/search?q=%22oil+prices%22+OR+%22crude+oil%22+OR+%22tanker+rates%22+OR+%22LNG+shipping%22+OR+%22OPEC%22&hl=en-US&gl=US&ceid=US:en', source: 'Google News' },
   { url: 'https://gcaptain.com/feed/', source: 'gCaptain' },
   { url: 'https://maritime-executive.com/feed', source: 'Maritime Executive' },
 ];
