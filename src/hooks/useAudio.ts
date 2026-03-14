@@ -188,11 +188,12 @@ function createWhiteNoiseBuffer(ctx: AudioContext, durationSec: number): AudioBu
 // Live marine VHF radio streams — real human radio chatter
 // Uses plain HTML5 Audio (no Web Audio API routing) to avoid CORS restrictions.
 // Volume is controlled directly via audio.volume instead of through the gain chain.
+// Streams are ordered by preference — European maritime first, US as fallback.
+// Every 5 minutes, retries preferred streams so we don't get stuck on a fallback.
 const MARINE_STREAMS = [
-  'https://broadcastify.cdnstream1.com/34098', // Katwijk — ships approaching Rotterdam
   'https://broadcastify.cdnstream1.com/20660', // Eems/Dollard — Netherlands Coastguard
   'https://broadcastify.cdnstream1.com/12874', // Terheijde — Dutch marine VHF
-  'https://broadcastify.cdnstream1.com/35475', // VHF CH 16, 67, 61 (fallback)
+  'https://broadcastify.cdnstream1.com/35475', // VHF CH 16, 67, 61
   'https://broadcastify.cdnstream1.com/44773', // Marine SAR CH 16, 65A, 82A
   'https://broadcastify.cdnstream1.com/17329', // NJ/NY marine (last resort)
 ];
@@ -202,6 +203,8 @@ function createRadioLayer(_ctx: AudioContext, _masterGain: GainNode, volume: num
   const audio = new Audio();
   let stopped = false;
   let streamIndex = 0;
+  let currentStreamIndex = -1;
+  let retryTimer: ReturnType<typeof setInterval> | null = null;
 
   const setVol = (v: number) => {
     audio.volume = Math.max(0, Math.min(1, v * 0.8));
@@ -226,6 +229,7 @@ function createRadioLayer(_ctx: AudioContext, _masterGain: GainNode, volume: num
   let stallTimer: ReturnType<typeof setTimeout> | null = null;
   audio.onplaying = () => {
     if (stallTimer) clearTimeout(stallTimer);
+    currentStreamIndex = streamIndex;
   };
   audio.onwaiting = () => {
     if (stopped) return;
@@ -236,12 +240,22 @@ function createRadioLayer(_ctx: AudioContext, _masterGain: GainNode, volume: num
 
   tryStream();
 
+  // Periodically retry preferred streams if we fell back to a lower-priority one
+  retryTimer = setInterval(() => {
+    if (stopped || currentStreamIndex <= 0) return;
+    // Try to reconnect to the top-priority stream
+    streamIndex = 0;
+    audio.pause();
+    tryStream();
+  }, 5 * 60_000);
+
   return {
     stop: () => {
       stopped = true;
       audio.pause();
       audio.src = '';
       if (stallTimer) clearTimeout(stallTimer);
+      if (retryTimer) clearInterval(retryTimer);
     },
     setVolume: setVol,
   };
