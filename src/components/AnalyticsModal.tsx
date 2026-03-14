@@ -91,10 +91,12 @@ function generateExecutiveSummary(
 
   // Anomalies
   const alertCount = anomalies.filter(a => a.severity === 'alert').length;
-  if (alertCount > 0) {
+  if (vesselCount === 0) {
+    parts.push('AIS feed offline — anomaly detection unavailable.');
+  } else if (alertCount > 0) {
     parts.push(`${alertCount} critical anomal${alertCount === 1 ? 'y' : 'ies'} detected.`);
   } else {
-    parts.push('No critical anomalies detected.');
+    parts.push('No AIS anomalies detected in current vessel data.');
   }
 
   return parts.join(' ');
@@ -156,8 +158,9 @@ function generateTrafficAnalysis(
   return parts.join(' ');
 }
 
-function generateAnomalyAnalysis(anomalies: Anomaly[]): string {
-  if (anomalies.length === 0) return 'No anomalies detected — strait operating normally. All tracked vessels are reporting positions within expected parameters.';
+function generateAnomalyAnalysis(anomalies: Anomaly[], vesselCount: number): string {
+  if (vesselCount === 0) return 'No AIS data available — anomaly detection requires a live vessel feed. Connect an AIS data source to enable real-time monitoring.';
+  if (anomalies.length === 0) return 'No vessel-level anomalies detected in current AIS data. All tracked vessels are reporting positions within expected parameters. Note: this assessment is limited to AIS-observable behavior and does not reflect broader geopolitical or security conditions in the region.';
 
   const parts: string[] = [];
   const highSpeed = anomalies.filter(a => a.type === 'High Speed');
@@ -440,8 +443,8 @@ export default function AnalyticsModal({ open, onClose }: { open: boolean; onClo
     [vessels, trends, speedProfile],
   );
   const anomalyAnalysis = useMemo(
-    () => generateAnomalyAnalysis(anomalies),
-    [anomalies],
+    () => generateAnomalyAnalysis(anomalies, vessels.size),
+    [anomalies, vessels.size],
   );
   const marketAnalysis = useMemo(
     () => generateMarketAnalysis(commodities, trends),
@@ -883,11 +886,16 @@ export default function AnalyticsModal({ open, onClose }: { open: boolean; onClo
               <SectionHeader title="Anomalies & Alerts" />
 
               <div className="flex items-center gap-2 mb-2">
-                <span className={`w-2 h-2 rounded-full ${anomalies.length > 0 ? 'bg-status-warn animate-pulse' : 'bg-status-nominal'}`} />
+                <span className={`w-2 h-2 rounded-full ${
+                  vessels.size === 0 ? 'bg-text-dim' :
+                  anomalies.length > 0 ? 'bg-status-warn animate-pulse' : 'bg-status-nominal'
+                }`} />
                 <span className="text-xs text-text-secondary">
-                  {anomalies.length > 0
-                    ? `${anomalies.length} anomal${anomalies.length === 1 ? 'y' : 'ies'} detected`
-                    : 'No anomalies — strait operating normally'}
+                  {vessels.size === 0
+                    ? 'No AIS data — anomaly detection offline'
+                    : anomalies.length > 0
+                      ? `${anomalies.length} anomal${anomalies.length === 1 ? 'y' : 'ies'} detected`
+                      : 'No vessel-level anomalies in current data'}
                 </span>
               </div>
 

@@ -181,8 +181,8 @@ export default function AnalyticsSidebar({ onExpandClick }: { onExpandClick: () 
             {/* Anomalies list */}
             {anomalies.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-32 text-text-dim text-[11px] gap-1">
-                <div className="led led-live" />
-                <span className="mt-2">No anomalies detected</span>
+                <div className={`led ${vessels.size === 0 ? '' : 'led-live'}`} />
+                <span className="mt-2">{vessels.size === 0 ? 'No AIS data available' : 'No vessel anomalies in current data'}</span>
               </div>
             ) : (
               <div className="space-y-1">
