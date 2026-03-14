@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAudio, MARINE_STREAMS } from '../hooks/useAudio';
-import { Volume2, VolumeX, Waves, Radar, Radio, Zap } from 'lucide-react';
+import { Volume2, VolumeX, Waves, Radar, Radio, Zap, Megaphone } from 'lucide-react';
 
 export default function AudioController() {
   const audio = useAudio();
@@ -117,6 +117,27 @@ export default function AudioController() {
                     <option key={s.url} value={i}>{s.label}</option>
                   ))}
                 </select>
+              </div>
+            )}
+
+            {/* Shipping forecast */}
+            <ToggleRow
+              icon={<Megaphone size={13} />}
+              label="Forecast"
+              sublabel="Spoken shipping forecast"
+              enabled={audio.forecastEnabled}
+              onToggle={audio.toggleForecast}
+            />
+
+            {/* Speak now button — only visible when forecast is on */}
+            {audio.forecastEnabled && (
+              <div className="pl-7">
+                <button
+                  onClick={() => audio.speakForecastNow()}
+                  className="w-full text-[10px] text-text-dim hover:text-accent uppercase tracking-wider font-semibold py-1 rounded-sm hover:bg-surface-1 transition-colors text-left"
+                >
+                  ▶ Speak Now
+                </button>
               </div>
             )}
 

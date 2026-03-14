@@ -5,6 +5,7 @@ import {
 } from 'recharts';
 import { useStore } from '../store';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { generateShippingForecast } from '../utils/shippingForecast';
 
 const COLORS = ['#00b4d8', '#ffab00', '#00e676', '#7c4dff', '#ff6e40', '#448aff'];
 const tooltipStyle = {
@@ -21,7 +22,13 @@ export default function AnalyticsSidebar({ onExpandClick }: { onExpandClick: () 
   const vessels = useStore((s) => s.vessels);
   const transitHistory = useStore((s) => s.transitHistory);
   const historicalData = useStore((s) => s.historicalData);
+  const weather = useStore((s) => s.weather);
   const [section, setSection] = useState<'charts' | 'anomalies'>('charts');
+
+  const forecast = useMemo(() => {
+    if (!weather.current) return null;
+    return generateShippingForecast(weather.current, weather.daily);
+  }, [weather]);
 
   const speedData = useMemo(() => {
     const buckets = [
@@ -115,6 +122,13 @@ export default function AnalyticsSidebar({ onExpandClick }: { onExpandClick: () 
       <div className="flex-1 overflow-y-auto p-3 space-y-3">
         {section === 'charts' ? (
           <>
+            {/* Shipping forecast */}
+            {forecast && (
+              <div className="bg-surface-1 rounded-sm border border-border-dim p-2.5 font-mono text-[9px] leading-relaxed text-accent/80 whitespace-pre-wrap">
+                {forecast.text}
+              </div>
+            )}
+
             {/* Trend cards */}
             {trends && (
               <div className="grid grid-cols-2 gap-1.5">

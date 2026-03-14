@@ -1,4 +1,6 @@
 import { useRef, useCallback, useEffect, useState } from 'react';
+import { useStore } from '../store';
+import { generateShippingForecast } from '../utils/shippingForecast';
 
 interface AudioState {
   enabled: boolean;
@@ -8,6 +10,7 @@ interface AudioState {
   radioEnabled: boolean;
   uiSoundsEnabled: boolean;
   radioStreamIndex: number; // -1 = auto (cascade), 0+ = specific stream
+  forecastEnabled: boolean;
 }
 
 const DEFAULT_STATE: AudioState = {
@@ -18,6 +21,7 @@ const DEFAULT_STATE: AudioState = {
   radioEnabled: true,
   uiSoundsEnabled: true,
   radioStreamIndex: -1,
+  forecastEnabled: true,
 };
 
 function loadState(): AudioState {
@@ -268,6 +272,58 @@ function createRadioLayer(_ctx: AudioContext, _masterGain: GainNode, volume: num
   };
 }
 
+/** Shipping forecast — periodic speech synthesis using real weather data */
+function createForecastLayer(volume: number): AmbientLayer {
+  let stopped = false;
+  let intervalId: ReturnType<typeof setInterval> | null = null;
+  let currentVolume = volume;
+
+  // Pick a British English voice if available
+  const pickVoice = (): SpeechSynthesisVoice | null => {
+    const voices = window.speechSynthesis.getVoices();
+    return voices.find(v => v.lang === 'en-GB') ??
+           voices.find(v => v.lang.startsWith('en-')) ??
+           null;
+  };
+
+  const speak = () => {
+    if (stopped || !window.speechSynthesis) return;
+
+    const weather = useStore.getState().weather;
+    if (!weather.current) return;
+
+    const { speakText } = generateShippingForecast(weather.current, weather.daily);
+
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(speakText);
+    const voice = pickVoice();
+    if (voice) utterance.voice = voice;
+    utterance.rate = 0.9;
+    utterance.pitch = 0.9;
+    utterance.volume = Math.max(0, Math.min(1, currentVolume));
+
+    window.speechSynthesis.speak(utterance);
+  };
+
+  // Speak first forecast after a short delay (let voices load)
+  const firstTimer = setTimeout(speak, 5000);
+
+  // Repeat every 30 minutes
+  intervalId = setInterval(speak, 30 * 60_000);
+
+  return {
+    stop: () => {
+      stopped = true;
+      clearTimeout(firstTimer);
+      if (intervalId) clearInterval(intervalId);
+      window.speechSynthesis?.cancel();
+    },
+    setVolume: (v: number) => { currentVolume = v; },
+  };
+}
+
 // ── Hook ──
 
 export function useAudio() {
@@ -279,7 +335,8 @@ export function useAudio() {
     ocean: AmbientLayer | null;
     sonar: AmbientLayer | null;
     radio: AmbientLayer | null;
-  }>({ ocean: null, sonar: null, radio: null });
+    forecast: AmbientLayer | null;
+  }>({ ocean: null, sonar: null, radio: null, forecast: null });
 
   // Persist state
   useEffect(() => {
@@ -308,6 +365,7 @@ export function useAudio() {
     if (layers.ocean) { layers.ocean.stop(); layers.ocean = null; }
     if (layers.sonar) { layers.sonar.stop(); layers.sonar = null; }
     if (layers.radio) { layers.radio.stop(); layers.radio = null; }
+    if (layers.forecast) { layers.forecast.stop(); layers.forecast = null; }
     if (ctxRef.current && ctxRef.current.state !== 'closed') {
       ctxRef.current.close().catch(() => {});
     }
@@ -350,10 +408,18 @@ export function useAudio() {
       layers.radio = null;
     }
 
+    // Forecast — speech synthesis
+    if (state.forecastEnabled && !layers.forecast) {
+      layers.forecast = createForecastLayer(state.volume);
+    } else if (!state.forecastEnabled && layers.forecast) {
+      layers.forecast.stop();
+      layers.forecast = null;
+    }
+
     return () => {
       teardownAll();
     };
-  }, [state.enabled, state.oceanEnabled, state.sonarEnabled, state.radioEnabled, state.radioStreamIndex]);
+  }, [state.enabled, state.oceanEnabled, state.sonarEnabled, state.radioEnabled, state.radioStreamIndex, state.forecastEnabled]);
 
   // Update master volume (and radio which uses its own volume control)
   useEffect(() => {
@@ -362,6 +428,9 @@ export function useAudio() {
     }
     if (layersRef.current.radio?.setVolume) {
       layersRef.current.radio.setVolume(state.volume);
+    }
+    if (layersRef.current.forecast?.setVolume) {
+      layersRef.current.forecast.setVolume(state.volume);
     }
   }, [state.volume]);
 
@@ -441,6 +510,29 @@ export function useAudio() {
     }
   }, []);
 
+  const toggleForecast = useCallback(() => {
+    setState(s => ({ ...s, forecastEnabled: !s.forecastEnabled }));
+  }, []);
+
+  const speakForecastNow = useCallback(() => {
+    if (!state.enabled || !state.forecastEnabled) return;
+    const weather = useStore.getState().weather;
+    if (!weather.current) return;
+
+    const { speakText } = generateShippingForecast(weather.current, weather.daily);
+    window.speechSynthesis?.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(speakText);
+    const voices = window.speechSynthesis.getVoices();
+    const voice = voices.find(v => v.lang === 'en-GB') ??
+                  voices.find(v => v.lang.startsWith('en-')) ?? null;
+    if (voice) utterance.voice = voice;
+    utterance.rate = 0.9;
+    utterance.pitch = 0.9;
+    utterance.volume = Math.max(0, Math.min(1, state.volume));
+    window.speechSynthesis.speak(utterance);
+  }, [state.enabled, state.forecastEnabled, state.volume]);
+
   const toggleUiSounds = useCallback(() => {
     setState(s => ({ ...s, uiSoundsEnabled: !s.uiSoundsEnabled }));
   }, []);
@@ -453,6 +545,8 @@ export function useAudio() {
     toggleSonar,
     toggleRadio,
     setRadioStream,
+    toggleForecast,
+    speakForecastNow,
     toggleUiSounds,
     playSound,
   };
