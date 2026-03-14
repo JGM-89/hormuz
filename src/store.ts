@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Vessel, RawVessel, Transit, Stats, WSMessage, HistoricalData, NewsItem, OilPrice } from './types';
+import type { Vessel, RawVessel, Transit, Stats, WSMessage, HistoricalData, NewsItem, OilPrice, CommodityData, WeatherState } from './types';
 import { enrichVessel } from './utils/ais';
 
 // Data source config — set via env vars at build time
@@ -28,6 +28,9 @@ interface AppState {
   aisHealth: AisHealth | null;
   news: NewsItem[];
   oilPrice: OilPrice | null;
+  commodities: CommodityData[];
+  weather: WeatherState;
+  expandedCommodity: string | null;
   connected: boolean;
   dataMode: 'github' | 'api' | 'ws';
   lastFetch: number;
@@ -38,6 +41,9 @@ interface AppState {
   setAisHealth: (health: AisHealth | null) => void;
   setNews: (news: NewsItem[]) => void;
   setOilPrice: (price: OilPrice | null) => void;
+  setCommodities: (data: CommodityData[]) => void;
+  setWeather: (data: WeatherState) => void;
+  setExpandedCommodity: (symbol: string | null) => void;
   setLiveData: (vessels: Record<string, RawVessel>, stats: Partial<Stats> | undefined, transits: Transit[], aisHealth?: AisHealth | null) => void;
 }
 
@@ -83,6 +89,9 @@ export const useStore = create<AppState>((set) => ({
   aisHealth: null,
   news: [],
   oilPrice: null,
+  commodities: [],
+  weather: { current: null, daily: [] },
+  expandedCommodity: null,
   connected: false,
   dataMode: getDataMode(),
   lastFetch: 0,
@@ -93,6 +102,9 @@ export const useStore = create<AppState>((set) => ({
   setAisHealth: (health) => set({ aisHealth: health }),
   setNews: (news) => set({ news }),
   setOilPrice: (price) => set({ oilPrice: price }),
+  setCommodities: (data) => set({ commodities: data }),
+  setWeather: (data) => set({ weather: data }),
+  setExpandedCommodity: (symbol) => set({ expandedCommodity: symbol }),
 
   setLiveData: (vessels, stats, transits, aisHealth) => {
     const enriched = enrichVesselMap(vessels);
@@ -210,10 +222,28 @@ async function pollAPI() {
       ]);
       useStore.getState().setHistoricalData({ dailyStats, transitCounts, topVessels, dbStats });
     }
+
+    // Fetch commodity prices (non-blocking, fail silently)
+    fetchJSON(`${API_BASE}/api/commodities`)
+      .then(data => { if (Array.isArray(data) && data.length > 0) useStore.getState().setCommodities(data); })
+      .catch(() => {});
   } catch (err) {
     console.warn('API poll failed:', err);
     useStore.getState().setConnected(false);
   }
+}
+
+// Poll commodity prices from NAS server (works in both WS and API modes)
+let commodityPollInterval: ReturnType<typeof setInterval> | null = null;
+
+async function pollCommodities() {
+  const base = API_BASE || `${window.location.protocol}//${window.location.host}`;
+  try {
+    const data = await fetchJSON(`${base}/api/commodities`);
+    if (Array.isArray(data) && data.length > 0) {
+      useStore.getState().setCommodities(data);
+    }
+  } catch { /* silent */ }
 }
 
 export function connectDataSource() {
@@ -222,17 +252,24 @@ export function connectDataSource() {
 
   if (mode === 'ws') {
     connectWebSocketMode();
+    // Also poll commodities from the same server
+    pollCommodities();
+    commodityPollInterval = setInterval(pollCommodities, 5 * 60_000);
   } else if (mode === 'github') {
     pollGitHub();
     pollInterval = setInterval(pollGitHub, 60_000);
   } else {
     pollAPI();
     pollInterval = setInterval(pollAPI, 5_000);
+    // Commodity polling is handled inside pollAPI, but start initial fetch
+    pollCommodities();
+    commodityPollInterval = setInterval(pollCommodities, 5 * 60_000);
   }
 }
 
 export function disconnectDataSource() {
   if (reconnectTimeout) clearTimeout(reconnectTimeout);
   if (pollInterval) clearInterval(pollInterval);
+  if (commodityPollInterval) clearInterval(commodityPollInterval);
   ws?.close();
 }

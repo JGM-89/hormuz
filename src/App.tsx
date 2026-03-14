@@ -7,12 +7,12 @@ import VesselPanel from './components/VesselPanel';
 import ChokePointOverlay from './components/ChokePointOverlay';
 import AnalyticsModal from './components/AnalyticsModal';
 import OutageOverlay from './components/OutageOverlay';
-import WeatherWidget from './components/WeatherWidget';
 import NewsTicker from './components/NewsTicker';
 import ResizablePanel from './components/ResizablePanel';
 import VesselList from './components/VesselList';
 import AnalyticsSidebar from './components/AnalyticsSidebar';
-import CommodityTicker from './components/CommodityTicker';
+import CommodityPanel from './components/CommodityPanel';
+import WeatherPanel from './components/WeatherPanel';
 import AudioController from './components/AudioController';
 
 // Icons for panel collapse state
@@ -84,15 +84,10 @@ export default function App() {
             <div className="absolute bottom-8 left-3 pointer-events-auto max-w-[260px]">
               <ChokePointOverlay />
             </div>
-
-            {/* Bottom-right: Weather (above MapLibre attribution) */}
-            <div className="absolute bottom-8 right-3 pointer-events-auto">
-              <WeatherWidget />
-            </div>
           </div>
         </div>
 
-        {/* RIGHT PANEL: Analytics + Commodities */}
+        {/* RIGHT PANEL: Commodities + Weather + Analytics */}
         <ResizablePanel
           side="right"
           defaultWidth={360}
@@ -103,12 +98,14 @@ export default function App() {
           icon={<AnalyticsIcon />}
         >
           <div className="flex flex-col h-full">
-            {/* Commodity prices — top section */}
-            <div className="border-b border-border-dim flex-shrink-0">
-              <div className="px-2.5 py-1.5 border-b border-border-dim">
-                <span className="label-caps">Commodities</span>
-              </div>
-              <CommodityTicker />
+            {/* Commodity prices — expandable rows with sparklines */}
+            <div className="border-b border-border flex-shrink-0 overflow-y-auto max-h-[50%]">
+              <CommodityPanel />
+            </div>
+
+            {/* Weather & Strait conditions */}
+            <div className="border-b border-border flex-shrink-0">
+              <WeatherPanel />
             </div>
 
             {/* Analytics charts & alerts — fills remaining space */}

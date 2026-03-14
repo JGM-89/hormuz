@@ -109,6 +109,8 @@ const server = createServer((req, res) => {
       res.end(JSON.stringify(getTopVessels(30)));
     } else if (req.url === '/api/db/stats') {
       res.end(JSON.stringify(getDbStats()));
+    } else if (req.url === '/api/commodities') {
+      handleCommodities(res);
     } else if (req.url === '/api/health') {
       res.end(JSON.stringify({ status: 'ok', uptime: process.uptime(), github: isGitHubConfigured() }));
     } else {
@@ -319,6 +321,155 @@ setInterval(async () => {
   };
   await pushSnapshot(vessels, transitHistory, historicalData, getAisHealth());
 }, PUSH_INTERVAL_MS);
+
+// --- Commodity Price Proxy ---
+const YAHOO_SYMBOLS = ['BZ=F', 'CL=F', 'NG=F', 'TTF=F', 'ALI=F'];
+const COMMODITY_META = {
+  'BZ=F': { name: 'Brent Crude Oil', shortName: 'BRENT', unit: '$/bbl', sensitivity: 0.95 },
+  'CL=F': { name: 'WTI Crude Oil', shortName: 'WTI', unit: '$/bbl', sensitivity: 0.70 },
+  'NG=F': { name: 'Natural Gas (Henry Hub)', shortName: 'NATGAS', unit: '$/MMBtu', sensitivity: 0.30 },
+  'TTF=F': { name: 'TTF Natural Gas (EU)', shortName: 'TTF', unit: '€/MWh', sensitivity: 0.85 },
+  'ALI=F': { name: 'Aluminum', shortName: 'ALUM', unit: '$/mt', sensitivity: 0.15 },
+};
+const DERIVED_META = {
+  'LNG': { name: 'LNG (Asia JKM)', shortName: 'LNG', unit: '$/MMBtu', sensitivity: 0.90, baseSymbol: 'NG=F', multiplier: 3.5, offset: 2.0 },
+  'UREA': { name: 'Urea (NOLA)', shortName: 'UREA', unit: '$/mt', sensitivity: 0.60, baseSymbol: 'BZ=F', multiplier: 8.5, offset: 10 },
+  'NH3': { name: 'Ammonia (FOB ME)', shortName: 'NH3', unit: '$/mt', sensitivity: 0.75, baseSymbol: 'BZ=F', multiplier: 6.5, offset: 15 },
+};
+
+let commodityCache = null;
+let commodityCacheTime = 0;
+const COMMODITY_CACHE_TTL = 5 * 60_000; // 5 minutes
+
+async function fetchYahooSymbol(symbol) {
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1mo`;
+  const res = await fetch(url, {
+    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; HormuzTracker/1.0)' },
+  });
+  if (!res.ok) throw new Error(`Yahoo ${symbol}: ${res.status}`);
+  const data = await res.json();
+  const result = data.chart?.result?.[0];
+  if (!result) throw new Error(`Yahoo ${symbol}: no result`);
+
+  const meta = result.meta;
+  const closes = result.indicators?.quote?.[0]?.close || [];
+  const timestamps = result.timestamp || [];
+  const price = meta.regularMarketPrice;
+  const prevClose = meta.chartPreviousClose || (closes.length >= 2 ? closes[closes.length - 2] : price);
+  const open = closes.length > 0 ? closes[closes.length - 1] : price; // today's open approximation
+  const dayHigh = meta.regularMarketDayHigh || price;
+  const dayLow = meta.regularMarketDayLow || price;
+  const change = price - prevClose;
+  const changePercent = prevClose ? (change / prevClose) * 100 : 0;
+
+  // Build history from daily closes
+  const history = [];
+  for (let i = 0; i < closes.length; i++) {
+    if (closes[i] != null && timestamps[i]) {
+      history.push({ timestamp: timestamps[i] * 1000, price: closes[i] });
+    }
+  }
+
+  return { price, change, changePercent, open24h: open, high24h: dayHigh, low24h: dayLow, history };
+}
+
+function deriveFromBase(baseData, derived) {
+  const price = baseData.price * derived.multiplier + derived.offset;
+  const prevPrice = (baseData.price - baseData.change) * derived.multiplier + derived.offset;
+  const change = price - prevPrice;
+  const changePercent = prevPrice ? (change / prevPrice) * 100 : 0;
+  const history = baseData.history.map(h => ({
+    timestamp: h.timestamp,
+    price: h.price * derived.multiplier + derived.offset,
+  }));
+  const prices = history.map(h => h.price);
+  return {
+    price: Math.round(price * 100) / 100,
+    change: Math.round(change * 100) / 100,
+    changePercent: Math.round(changePercent * 100) / 100,
+    open24h: Math.round((baseData.open24h * derived.multiplier + derived.offset) * 100) / 100,
+    high24h: Math.round(Math.max(...prices.slice(-5), price) * 100) / 100,
+    low24h: Math.round(Math.min(...prices.slice(-5), price) * 100) / 100,
+    history,
+  };
+}
+
+async function fetchAllCommodities() {
+  const now = Date.now();
+  if (commodityCache && now - commodityCacheTime < COMMODITY_CACHE_TTL) {
+    return commodityCache;
+  }
+
+  const results = await Promise.allSettled(
+    YAHOO_SYMBOLS.map(s => fetchYahooSymbol(s))
+  );
+
+  const commodities = [];
+  const fetched = {};
+
+  // Process Yahoo Finance symbols
+  for (let i = 0; i < YAHOO_SYMBOLS.length; i++) {
+    const symbol = YAHOO_SYMBOLS[i];
+    const meta = COMMODITY_META[symbol];
+    const result = results[i];
+
+    if (result.status === 'fulfilled') {
+      const d = result.value;
+      fetched[symbol] = d;
+      commodities.push({
+        symbol,
+        ...meta,
+        price: Math.round(d.price * 100) / 100,
+        change: Math.round(d.change * 100) / 100,
+        changePercent: Math.round(d.changePercent * 100) / 100,
+        open24h: Math.round(d.open24h * 100) / 100,
+        high24h: Math.round(d.high24h * 100) / 100,
+        low24h: Math.round(d.low24h * 100) / 100,
+        history: d.history,
+        hormuzSensitivity: meta.sensitivity,
+      });
+    }
+  }
+
+  // Process derived commodities
+  for (const [symbol, derived] of Object.entries(DERIVED_META)) {
+    const baseData = fetched[derived.baseSymbol];
+    if (baseData) {
+      const d = deriveFromBase(baseData, derived);
+      commodities.push({
+        symbol,
+        name: derived.name,
+        shortName: derived.shortName,
+        unit: derived.unit,
+        ...d,
+        hormuzSensitivity: derived.sensitivity,
+      });
+    }
+  }
+
+  if (commodities.length > 0) {
+    commodityCache = commodities;
+    commodityCacheTime = now;
+  }
+
+  return commodities;
+}
+
+async function handleCommodities(res) {
+  try {
+    const data = await fetchAllCommodities();
+    res.end(JSON.stringify(data));
+  } catch (err) {
+    console.error('Commodity fetch error:', err.message);
+    // Return cached data if available, even if stale
+    if (commodityCache) {
+      res.end(JSON.stringify(commodityCache));
+    } else {
+      res.statusCode = 503;
+      res.end(JSON.stringify({ error: 'Commodity data unavailable' }));
+    }
+  }
+}
 
 // --- Start ---
 server.listen(PORT, () => {

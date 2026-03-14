@@ -90,6 +90,58 @@ export interface OilPrice {
   timestamp: number;
 }
 
+// Commodity price types
+export interface CommodityPricePoint {
+  timestamp: number;
+  price: number;
+}
+
+export interface CommodityData {
+  symbol: string;
+  name: string;
+  shortName: string;
+  unit: string;
+  price: number;
+  change: number;
+  changePercent: number;
+  high24h: number;
+  low24h: number;
+  open24h: number;
+  history: CommodityPricePoint[];
+  hormuzSensitivity: number;
+}
+
+// Weather types
+export interface WeatherCurrent {
+  windSpeed: number;
+  windDir: number;
+  windGusts: number;
+  temp: number;
+  waveHeight: number;
+  visibility: number;
+  beaufort: number;
+  beaufortLabel: string;
+  passageRisk: 'low' | 'moderate' | 'high' | 'severe';
+  updatedAt: number;
+}
+
+export interface WeatherForecastDay {
+  date: string;
+  label: string;
+  windSpeedMax: number;
+  windGustsMax: number;
+  waveHeightMax: number;
+  tempMin: number;
+  tempMax: number;
+  beaufortMax: number;
+  passageRisk: 'low' | 'moderate' | 'high' | 'severe';
+}
+
+export interface WeatherState {
+  current: WeatherCurrent | null;
+  daily: WeatherForecastDay[];
+}
+
 export type WSMessage =
   | { type: 'snapshot'; vessels: Record<string, RawVessel>; stats?: Stats; transitHistory: Transit[] }
   | { type: 'vessel_update'; vessel: RawVessel; stats?: Stats }
