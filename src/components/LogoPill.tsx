@@ -1,5 +1,5 @@
 import { useStore } from '../store';
-import Widget from './Widget';
+import { Ship } from 'lucide-react';
 
 export default function LogoPill() {
   const aisHealth = useStore((s) => s.aisHealth);
@@ -9,23 +9,24 @@ export default function LogoPill() {
   const statusLabel = aisHealth?.status === 'outage' ? 'Outage' : isLive ? 'Live' : 'Offline';
 
   return (
-    <Widget variant="pill" severity="none" role="banner" aria-label={`Hormuz Tracker — ${statusLabel}`}>
-      <div className="flex items-center gap-2.5">
-        <div className="text-xs font-bold">
-          <span className="text-accent tracking-widest">HORMUZ</span>
-          <span className="text-text-dim tracking-widest ml-1">TRACKER</span>
-        </div>
-        <div className="h-4 w-px bg-border" aria-hidden="true" />
-        <div className="flex items-center gap-1.5">
-          <div
-            className={`led ${isLive ? 'led-live' : 'led-crit'} ${isLive ? 'animate-pulse-radar' : ''}`}
-            aria-hidden="true"
-          />
-          <span className={`text-[10px] font-semibold uppercase tracking-widest ${isLive ? 'text-status-nominal' : 'text-status-crit'}`}>
-            {statusLabel}
-          </span>
-        </div>
+    <div className="flex items-center gap-3" role="banner" aria-label={`Hormuz Command — ${statusLabel}`}>
+      <div className="flex items-center gap-2">
+        <Ship size={20} className="text-accent" />
+        <span className="text-sm font-bold tracking-tight">
+          <span className="text-text-primary">HORMUZ</span>
+          <span className="text-accent">COMMAND</span>
+        </span>
       </div>
-    </Widget>
+      <div className="h-5 w-px bg-border" aria-hidden="true" />
+      <div className="flex items-center gap-1.5">
+        <div
+          className={`led ${isLive ? 'led-live' : 'led-crit'} ${isLive ? 'animate-pulse-radar' : ''}`}
+          aria-hidden="true"
+        />
+        <span className={`text-[11px] font-semibold uppercase tracking-widest ${isLive ? 'text-status-nominal' : 'text-status-crit'}`}>
+          {statusLabel}
+        </span>
+      </div>
+    </div>
   );
 }
