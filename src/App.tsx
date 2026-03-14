@@ -58,18 +58,19 @@ export default function App() {
             <ChokePointOverlay />
           </div>
           <div className="flex-1" />
-          <div className="pointer-events-auto flex-shrink-0 flex items-end gap-2">
+          <div className="pointer-events-auto flex-shrink-0 flex flex-col items-end gap-2">
             <WeatherWidget />
             <button
               onClick={() => setAnalyticsOpen(true)}
-              className="bg-slate-900/80 backdrop-blur-md border border-slate-700/50 rounded-lg p-2.5 shadow-xl hover:bg-slate-800/80 transition-colors group"
-              title="Open Analytics"
+              className="bg-slate-900/80 backdrop-blur-md border border-slate-700/50 rounded-lg px-3 py-1.5 shadow-xl hover:bg-slate-800/80 active:bg-slate-700/80 transition-colors group flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+              aria-label="Open analytics dashboard"
             >
-              <svg width="18" height="18" viewBox="0 0 16 16" fill="none" className="text-slate-400 group-hover:text-cyan-400 transition-colors">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="text-slate-400 group-hover:text-cyan-400 transition-colors" aria-hidden="true">
                 <rect x="1" y="8" width="3" height="7" rx="0.5" fill="currentColor" opacity="0.6" />
                 <rect x="5.5" y="5" width="3" height="10" rx="0.5" fill="currentColor" opacity="0.8" />
                 <rect x="10" y="1" width="3" height="14" rx="0.5" fill="currentColor" />
               </svg>
+              <span className="text-xs text-slate-400 group-hover:text-cyan-400 transition-colors uppercase tracking-wider font-semibold">Analytics</span>
             </button>
           </div>
         </div>

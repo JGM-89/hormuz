@@ -9,7 +9,6 @@ export default function OilPriceWidget() {
   useEffect(() => {
     async function fetchPrice() {
       try {
-        // Try Yahoo Finance via a CORS proxy
         const res = await fetch(
           'https://query1.finance.yahoo.com/v8/finance/chart/BZ=F?interval=1d&range=5d'
         );
@@ -49,8 +48,12 @@ export default function OilPriceWidget() {
   const isUp = oilPrice.change >= 0;
 
   return (
-    <div className="bg-slate-900/80 backdrop-blur-md rounded-lg border border-slate-700/50 p-2.5 shadow-xl">
-      <div className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">
+    <div
+      className="bg-slate-900/80 backdrop-blur-md rounded-lg border border-slate-700/50 p-3 shadow-xl"
+      role="region"
+      aria-label={`Brent Crude: $${oilPrice.price.toFixed(2)}, ${isUp ? 'up' : 'down'} ${Math.abs(oilPrice.changePercent).toFixed(1)}%`}
+    >
+      <div className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">
         Brent Crude
       </div>
       <div className="flex items-baseline gap-2">

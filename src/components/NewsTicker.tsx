@@ -64,8 +64,12 @@ export default function NewsTicker() {
   const items = [...news, ...news];
 
   return (
-    <div className="bg-slate-950/90 backdrop-blur-sm border-t border-slate-800/50 overflow-hidden h-8 flex items-center">
-      <div className="flex-shrink-0 bg-red-600/90 text-white text-[10px] font-bold uppercase tracking-wider px-3 h-full flex items-center z-10">
+    <div
+      className="bg-slate-950/90 backdrop-blur-sm border-t border-slate-800/50 overflow-hidden h-8 flex items-center"
+      role="marquee"
+      aria-label="Maritime news headlines"
+    >
+      <div className="flex-shrink-0 bg-red-600/90 text-white text-xs font-bold uppercase tracking-wider px-3 h-full flex items-center z-10">
         News
       </div>
       <div className="overflow-hidden flex-1 relative">
@@ -76,11 +80,11 @@ export default function NewsTicker() {
               href={item.link}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-6 text-[11px] text-slate-300 hover:text-cyan-400 transition-colors"
+              className="inline-flex items-center gap-2 px-6 text-xs text-slate-300 hover:text-cyan-400 transition-colors focus:outline-none focus:text-cyan-400"
             >
-              <span className="text-slate-500 text-[9px] uppercase">{item.source}</span>
+              <span className="text-xs text-slate-500 uppercase">{item.source}</span>
               <span>{item.title}</span>
-              <span className="text-slate-600">|</span>
+              <span className="text-slate-600" aria-hidden="true">|</span>
             </a>
           ))}
         </div>
