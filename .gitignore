@@ -26,4 +26,7 @@ dist-ssr
 # Secrets
 .env
 
+# Docker exports
+*.tar
+
 .claude/settings.local.json
