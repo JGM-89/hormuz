@@ -1,5 +1,6 @@
 import { useStore } from '../store';
 import { getCongestionLevel } from '../utils/geo';
+import Widget from './Widget';
 
 export default function ChokePointOverlay() {
   const stats = useStore((s) => s.stats);
@@ -25,7 +26,7 @@ export default function ChokePointOverlay() {
   return (
     <div className="space-y-2" role="region" aria-label="Chokepoint status">
       {/* Congestion Card */}
-      <div className="bg-slate-900/90 backdrop-blur-md rounded-lg border border-slate-700/50 p-3 shadow-xl">
+      <Widget>
         <div className="flex items-center gap-2 mb-2">
           <div
             className="w-3 h-3 rounded-full animate-pulse"
@@ -47,23 +48,18 @@ export default function ChokePointOverlay() {
             <div className="text-amber-400 font-bold text-sm tabular-nums">{westbound}</div>
           </div>
         </div>
-      </div>
+      </Widget>
 
       {/* Anomaly Alerts */}
       {anomalies.length > 0 && (
-        <div
-          className="bg-slate-900/90 backdrop-blur-md rounded-lg border border-amber-500/30 p-3 shadow-xl"
+        <Widget
+          className="!border-amber-500/30"
           role="alert"
           aria-label={`${anomalies.length} speed anomalies detected`}
         >
           <div className="flex items-center gap-1.5 mb-1.5">
             <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <path
-                d="M8 1L1 14h14L8 1z"
-                stroke="#f59e0b"
-                strokeWidth="1.5"
-                fill="none"
-              />
+              <path d="M8 1L1 14h14L8 1z" stroke="#f59e0b" strokeWidth="1.5" fill="none" />
               <path d="M8 6v4M8 12v.5" stroke="#f59e0b" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
             <span className="text-xs font-semibold text-amber-400 uppercase tracking-wider">
@@ -72,11 +68,7 @@ export default function ChokePointOverlay() {
           </div>
           <div className="space-y-1 max-h-24 overflow-y-auto" role="list">
             {anomalies.slice(0, 5).map((v) => (
-              <div
-                key={v.mmsi}
-                className="text-xs text-slate-300 flex justify-between"
-                role="listitem"
-              >
+              <div key={v.mmsi} className="text-xs text-slate-300 flex justify-between" role="listitem">
                 <span className="truncate max-w-[140px]">{v.name}</span>
                 <span className={`tabular-nums ${v.speed < 3 ? 'text-red-400' : 'text-amber-400'}`}>
                   {v.speed.toFixed(1)} kn
@@ -84,7 +76,7 @@ export default function ChokePointOverlay() {
               </div>
             ))}
           </div>
-        </div>
+        </Widget>
       )}
     </div>
   );

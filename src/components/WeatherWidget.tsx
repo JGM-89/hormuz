@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import Widget from './Widget';
 
 interface WeatherData {
   windSpeed: number;   // knots
@@ -39,8 +40,7 @@ export default function WeatherWidget() {
   if (!weather) return null;
 
   return (
-    <div
-      className="bg-slate-900/80 backdrop-blur-md rounded-lg border border-slate-700/50 p-3 shadow-xl"
+    <Widget
       role="region"
       aria-label={`Strait conditions: wind ${weather.windSpeed} knots, ${weather.temp}°C, waves ${weather.waveHeight}m`}
     >
@@ -58,7 +58,7 @@ export default function WeatherWidget() {
         <span className="text-slate-600" aria-hidden="true">&middot;</span>
         <span className="text-slate-200">Waves {weather.waveHeight}m</span>
       </div>
-    </div>
+    </Widget>
   );
 }
 

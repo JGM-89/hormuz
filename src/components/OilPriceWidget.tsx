@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useStore } from '../store';
 import type { OilPrice } from '../types';
+import Widget from './Widget';
 
 export default function OilPriceWidget() {
   const storePrice = useStore((s) => s.oilPrice);
@@ -48,8 +49,7 @@ export default function OilPriceWidget() {
   const isUp = oilPrice.change >= 0;
 
   return (
-    <div
-      className="bg-slate-900/80 backdrop-blur-md rounded-lg border border-slate-700/50 p-3 shadow-xl"
+    <Widget
       role="region"
       aria-label={`Brent Crude: $${oilPrice.price.toFixed(2)}, ${isUp ? 'up' : 'down'} ${Math.abs(oilPrice.changePercent).toFixed(1)}%`}
     >
@@ -64,6 +64,6 @@ export default function OilPriceWidget() {
           {isUp ? '+' : ''}{oilPrice.change.toFixed(2)} ({isUp ? '+' : ''}{oilPrice.changePercent.toFixed(1)}%)
         </span>
       </div>
-    </div>
+    </Widget>
   );
 }

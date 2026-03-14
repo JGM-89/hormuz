@@ -11,6 +11,7 @@ import OutageOverlay from './components/OutageOverlay';
 import WeatherWidget from './components/WeatherWidget';
 import NewsTicker from './components/NewsTicker';
 import OilPriceWidget from './components/OilPriceWidget';
+import Widget from './components/Widget';
 
 export default function App() {
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
@@ -21,7 +22,7 @@ export default function App() {
   }, []);
 
   return (
-    <div className="h-screen w-screen relative bg-slate-950 text-slate-200 overflow-hidden">
+    <div className="h-screen w-screen relative bg-slate-950 text-slate-200 overflow-hidden select-none">
       {/* Map fills entire viewport */}
       <Map />
 
@@ -32,7 +33,7 @@ export default function App() {
       */}
       <div className="absolute inset-0 z-10 pointer-events-none flex flex-col">
         {/* === TOP ROW: logo | stats+outage | oil price === */}
-        <div className="flex items-start justify-between p-4 gap-4 flex-shrink-0">
+        <div className="flex flex-wrap items-start justify-between p-4 gap-4 flex-shrink-0">
           <div className="pointer-events-auto flex-shrink-0">
             <LogoPill />
           </div>
@@ -58,20 +59,9 @@ export default function App() {
             <ChokePointOverlay />
           </div>
           <div className="flex-1" />
-          <div className="pointer-events-auto flex-shrink-0 flex flex-col items-end gap-2">
+          <div className="pointer-events-auto flex flex-wrap items-end justify-end gap-2">
             <WeatherWidget />
-            <button
-              onClick={() => setAnalyticsOpen(true)}
-              className="bg-slate-900/80 backdrop-blur-md border border-slate-700/50 rounded-lg px-3 py-1.5 shadow-xl hover:bg-slate-800/80 active:bg-slate-700/80 transition-colors group flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
-              aria-label="Open analytics dashboard"
-            >
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="text-slate-400 group-hover:text-cyan-400 transition-colors" aria-hidden="true">
-                <rect x="1" y="8" width="3" height="7" rx="0.5" fill="currentColor" opacity="0.6" />
-                <rect x="5.5" y="5" width="3" height="10" rx="0.5" fill="currentColor" opacity="0.8" />
-                <rect x="10" y="1" width="3" height="14" rx="0.5" fill="currentColor" />
-              </svg>
-              <span className="text-xs text-slate-400 group-hover:text-cyan-400 transition-colors uppercase tracking-wider font-semibold">Analytics</span>
-            </button>
+            <AnalyticsButton onClick={() => setAnalyticsOpen(true)} />
           </div>
         </div>
 
@@ -87,5 +77,27 @@ export default function App() {
       {/* Analytics full-screen overlay */}
       <AnalyticsModal open={analyticsOpen} onClose={() => setAnalyticsOpen(false)} />
     </div>
+  );
+}
+
+function AnalyticsButton({ onClick }: { onClick: () => void }) {
+  return (
+    <Widget
+      className="cursor-pointer hover:bg-slate-800/80 active:bg-slate-700/80 transition-colors group"
+      role="button"
+      tabIndex={0}
+      aria-label="Open analytics dashboard"
+      onClick={onClick}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
+    >
+      <div className="flex items-center gap-2">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="text-slate-400 group-hover:text-cyan-400 transition-colors" aria-hidden="true">
+          <rect x="1" y="8" width="3" height="7" rx="0.5" fill="currentColor" opacity="0.6" />
+          <rect x="5.5" y="5" width="3" height="10" rx="0.5" fill="currentColor" opacity="0.8" />
+          <rect x="10" y="1" width="3" height="14" rx="0.5" fill="currentColor" />
+        </svg>
+        <span className="text-xs text-slate-400 group-hover:text-cyan-400 transition-colors uppercase tracking-wider font-semibold">Analytics</span>
+      </div>
+    </Widget>
   );
 }
