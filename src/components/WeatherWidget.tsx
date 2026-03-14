@@ -41,22 +41,21 @@ export default function WeatherWidget() {
 
   return (
     <Widget
+      severity="nominal"
       role="region"
       aria-label={`Strait conditions: wind ${weather.windSpeed} knots, ${weather.temp}°C, waves ${weather.waveHeight}m`}
     >
-      <div className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1.5">
-        Strait Conditions
-      </div>
-      <div className="flex items-center gap-3 text-xs">
+      <div className="label-caps mb-1">Strait Conditions</div>
+      <div className="flex items-center gap-3 text-[11px]">
         <div className="flex items-center gap-1.5" title={`Wind direction: ${weather.windDir}°`}>
           <WindArrow degrees={weather.windDir} />
-          <span className="text-slate-200">{weather.windSpeed}kn</span>
-          <span className="text-slate-500">gust {weather.windGusts}</span>
+          <span className="text-text-primary font-data">{weather.windSpeed}kn</span>
+          <span className="text-text-dim font-data">G{weather.windGusts}</span>
         </div>
-        <span className="text-slate-600" aria-hidden="true">&middot;</span>
-        <span className="text-slate-200">{weather.temp}°C</span>
-        <span className="text-slate-600" aria-hidden="true">&middot;</span>
-        <span className="text-slate-200">Waves {weather.waveHeight}m</span>
+        <span className="text-border" aria-hidden="true">&middot;</span>
+        <span className="text-text-primary font-data">{weather.temp}°C</span>
+        <span className="text-border" aria-hidden="true">&middot;</span>
+        <span className="text-text-primary font-data">{weather.waveHeight}m</span>
       </div>
     </Widget>
   );
@@ -72,7 +71,7 @@ function WindArrow({ degrees }: { degrees: number }) {
       aria-hidden="true"
       role="img"
     >
-      <path d="M6 1L3 9h6L6 1z" fill="#94a3b8" />
+      <path d="M6 1L3 9h6L6 1z" fill="#7a8ba3" />
     </svg>
   );
 }

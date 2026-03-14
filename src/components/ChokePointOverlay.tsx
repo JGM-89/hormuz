@@ -29,23 +29,26 @@ export default function ChokePointOverlay() {
       <Widget>
         <div className="flex items-center gap-2 mb-2">
           <div
-            className="w-3 h-3 rounded-full animate-pulse"
-            style={{ backgroundColor: congestion.color }}
+            className="led"
+            style={{
+              background: congestion.color,
+              boxShadow: `0 0 6px ${congestion.color}, 0 0 12px ${congestion.color}40`,
+            }}
             aria-hidden="true"
           />
-          <span className="text-xs font-semibold text-slate-200">
+          <span className="label-caps" style={{ color: congestion.color }}>
             Congestion: {congestion.label}
           </span>
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
-          <div className="bg-slate-800/50 rounded p-2" title="Vessels transiting eastbound in the last hour">
-            <span className="text-xs text-slate-400">Eastbound</span>
-            <div className="text-cyan-400 font-bold text-sm tabular-nums">{eastbound}</div>
+        <div className="grid grid-cols-2 gap-1.5">
+          <div className="bg-surface-1 rounded-sm p-1.5" title="Vessels transiting eastbound in the last hour">
+            <span className="label-caps">Eastbound</span>
+            <div className="text-accent font-bold text-sm font-data">{eastbound}</div>
           </div>
-          <div className="bg-slate-800/50 rounded p-2" title="Vessels transiting westbound in the last hour">
-            <span className="text-xs text-slate-400">Westbound</span>
-            <div className="text-amber-400 font-bold text-sm tabular-nums">{westbound}</div>
+          <div className="bg-surface-1 rounded-sm p-1.5" title="Vessels transiting westbound in the last hour">
+            <span className="label-caps">Westbound</span>
+            <div className="text-status-warn font-bold text-sm font-data">{westbound}</div>
           </div>
         </div>
       </Widget>
@@ -53,24 +56,24 @@ export default function ChokePointOverlay() {
       {/* Anomaly Alerts */}
       {anomalies.length > 0 && (
         <Widget
-          className="!border-amber-500/30"
+          severity="warn"
           role="alert"
           aria-label={`${anomalies.length} speed anomalies detected`}
         >
           <div className="flex items-center gap-1.5 mb-1.5">
             <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <path d="M8 1L1 14h14L8 1z" stroke="#f59e0b" strokeWidth="1.5" fill="none" />
-              <path d="M8 6v4M8 12v.5" stroke="#f59e0b" strokeWidth="1.5" strokeLinecap="round" />
+              <path d="M8 1L1 14h14L8 1z" stroke="#ffab00" strokeWidth="1.5" fill="none" />
+              <path d="M8 6v4M8 12v.5" stroke="#ffab00" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
-            <span className="text-xs font-semibold text-amber-400 uppercase tracking-wider">
+            <span className="text-[10px] font-semibold text-status-warn uppercase tracking-widest">
               Speed Anomalies ({anomalies.length})
             </span>
           </div>
           <div className="space-y-1 max-h-24 overflow-y-auto" role="list">
             {anomalies.slice(0, 5).map((v) => (
-              <div key={v.mmsi} className="text-xs text-slate-300 flex justify-between" role="listitem">
+              <div key={v.mmsi} className="text-[11px] text-text-primary flex justify-between" role="listitem">
                 <span className="truncate max-w-[140px]">{v.name}</span>
-                <span className={`tabular-nums ${v.speed < 3 ? 'text-red-400' : 'text-amber-400'}`}>
+                <span className={`font-data ${v.speed < 3 ? 'text-status-crit' : 'text-status-warn'}`}>
                   {v.speed.toFixed(1)} kn
                 </span>
               </div>

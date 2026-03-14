@@ -65,12 +65,12 @@ export default function NewsTicker() {
 
   return (
     <div
-      className="bg-slate-950/90 backdrop-blur-sm border-t border-slate-800/50 overflow-hidden h-8 flex items-center"
+      className="bg-base border-t border-border overflow-hidden h-7 flex items-center"
       role="marquee"
       aria-label="Maritime news headlines"
     >
-      <div className="flex-shrink-0 bg-red-600/90 text-white text-xs font-bold uppercase tracking-wider px-3 h-full flex items-center z-10">
-        News
+      <div className="flex-shrink-0 bg-status-crit text-white text-[10px] font-bold uppercase tracking-widest px-3 h-full flex items-center z-10">
+        NEWS
       </div>
       <div className="overflow-hidden flex-1 relative">
         <div className="animate-ticker flex whitespace-nowrap hover:[animation-play-state:paused]">
@@ -80,11 +80,11 @@ export default function NewsTicker() {
               href={item.link}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-6 text-xs text-slate-300 hover:text-cyan-400 transition-colors focus:outline-none focus:text-cyan-400"
+              className="inline-flex items-center gap-2 px-6 text-[11px] text-text-secondary hover:text-accent transition-colors focus:outline-none focus:text-accent uppercase tracking-wide"
             >
-              <span className="text-xs text-slate-500 uppercase">{item.source}</span>
+              <span className="text-[10px] text-text-dim font-data tracking-wider">{item.source}</span>
               <span>{item.title}</span>
-              <span className="text-slate-600" aria-hidden="true">|</span>
+              <span className="text-border" aria-hidden="true">|</span>
             </a>
           ))}
         </div>

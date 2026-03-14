@@ -1,5 +1,35 @@
 @import "tailwindcss";
 
+/* ── NASA Command Centre Design System ── */
+
+@theme {
+  /* Background tiers (darkest → lightest) */
+  --color-base: #030a18;
+  --color-surface-0: #071428;
+  --color-surface-1: #0c1e3a;
+  --color-surface-2: #122a4d;
+
+  /* Borders */
+  --color-border: #1a3a5c;
+  --color-border-dim: #0f2744;
+  --color-grid: #0d1f38;
+
+  /* Accent colors */
+  --color-accent: #00b4d8;
+  --color-accent-dim: #00b4d880;
+  --color-status-nominal: #00e676;
+  --color-status-warn: #ffab00;
+  --color-status-crit: #ff1744;
+  --color-status-info: #448aff;
+
+  /* Text hierarchy */
+  --color-text-primary: #e0e8f0;
+  --color-text-secondary: #7a8ba3;
+  --color-text-dim: #4a5e78;
+}
+
+/* ── Base ── */
+
 * {
   margin: 0;
   padding: 0;
@@ -12,20 +42,87 @@ body,
   height: 100%;
   width: 100%;
   overflow: hidden;
-  font-family:
-    "Inter",
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    Roboto,
-    sans-serif;
-  background: #020617;
-  color: #e2e8f0;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--color-base);
+  color: var(--color-text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Accessibility: respect reduced-motion preferences */
+/* Data font — monospace for all numeric readouts */
+.font-data {
+  font-family: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Command centre labels — uppercase, wide-tracked, dim */
+.label-caps {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-text-dim);
+}
+
+/* ── Background Grid Pattern ── */
+.command-grid {
+  background-image:
+    linear-gradient(var(--color-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-grid) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* CRT-style vignette over map */
+.map-vignette::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 50%, rgba(3, 10, 24, 0.5) 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ── LED Status Indicators ── */
+.led {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.led::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: inherit;
+  opacity: 0.3;
+  filter: blur(4px);
+}
+
+.led-live {
+  background: var(--color-status-nominal);
+  box-shadow: 0 0 6px var(--color-status-nominal), 0 0 12px rgba(0, 230, 118, 0.25);
+}
+
+.led-warn {
+  background: var(--color-status-warn);
+  box-shadow: 0 0 6px var(--color-status-warn), 0 0 12px rgba(255, 171, 0, 0.25);
+}
+
+.led-crit {
+  background: var(--color-status-crit);
+  box-shadow: 0 0 6px var(--color-status-crit), 0 0 12px rgba(255, 23, 68, 0.25);
+}
+
+.led-info {
+  background: var(--color-status-info);
+  box-shadow: 0 0 6px var(--color-status-info), 0 0 12px rgba(68, 138, 255, 0.25);
+}
+
+/* ── Accessibility ── */
+
 @media (prefers-reduced-motion: reduce) {
   *:not(.animate-ticker),
   *::before,
@@ -37,40 +134,41 @@ body,
   }
 }
 
-/* Focus visible — only show focus ring for keyboard navigation */
 :focus:not(:focus-visible) {
   outline: none;
 }
 
 :focus-visible {
-  outline: 2px solid rgba(6, 182, 212, 0.5);
-  outline-offset: 2px;
-  border-radius: 4px;
+  outline: 1px solid var(--color-accent);
+  outline-offset: 1px;
+  border-radius: 2px;
 }
 
-/* MapLibre overrides */
+/* ── MapLibre Overrides ── */
+
 .maplibregl-popup-content {
-  background: #1e293b !important;
-  border: 1px solid #334155 !important;
-  border-radius: 8px !important;
-  padding: 8px 10px !important;
-  box-shadow:
-    0 10px 25px rgba(0, 0, 0, 0.5),
-    0 0 0 1px rgba(6, 182, 212, 0.1) !important;
+  background: var(--color-surface-0) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 2px !important;
+  padding: 6px 8px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6) !important;
+  font-family: "JetBrains Mono", monospace !important;
+  font-size: 10px !important;
+  color: var(--color-text-primary) !important;
 }
 
 .maplibregl-popup-tip {
-  border-top-color: #1e293b !important;
+  border-top-color: var(--color-surface-0) !important;
 }
 
 .maplibregl-ctrl-group {
-  background: #1e293b !important;
-  border: 1px solid #334155 !important;
-  border-radius: 8px !important;
+  background: var(--color-surface-0) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 2px !important;
 }
 
 .maplibregl-ctrl-group button {
-  border-bottom: 1px solid #334155 !important;
+  border-bottom: 1px solid var(--color-border-dim) !important;
 }
 
 .maplibregl-ctrl-group button + button {
@@ -82,17 +180,19 @@ body,
 }
 
 .maplibregl-ctrl-scale {
-  background: rgba(15, 23, 42, 0.8) !important;
-  border-color: #475569 !important;
-  color: #94a3b8 !important;
-  font-size: 10px !important;
-  border-radius: 4px !important;
+  background: var(--color-surface-0) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text-dim) !important;
+  font-family: "JetBrains Mono", monospace !important;
+  font-size: 9px !important;
+  border-radius: 2px !important;
   padding: 1px 5px !important;
 }
 
-/* Scrollbar */
+/* ── Scrollbar ── */
+
 ::-webkit-scrollbar {
-  width: 4px;
+  width: 3px;
 }
 
 ::-webkit-scrollbar-track {
@@ -100,15 +200,16 @@ body,
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 4px;
+  background: var(--color-border);
+  border-radius: 0;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: var(--color-accent);
 }
 
-/* Animations */
+/* ── Animations (snappy, institutional) ── */
+
 @keyframes slide-in {
   from { transform: translateX(100%); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
@@ -130,20 +231,29 @@ body,
   100% { transform: scale(0.8); opacity: 0.6; }
 }
 
+@keyframes blink-critical {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0.3; }
+}
+
 .animate-slide-in {
-  animation: slide-in 0.25s ease-out;
+  animation: slide-in 0.15s ease-out;
 }
 
 .animate-slide-in-left {
-  animation: slide-in-left 0.25s ease-out;
+  animation: slide-in-left 0.15s ease-out;
 }
 
 .animate-fade-in {
-  animation: fade-in 0.2s ease-out;
+  animation: fade-in 0.1s ease-out;
 }
 
 .animate-pulse-radar {
   animation: pulse-radar 2s ease-in-out infinite;
+}
+
+.animate-blink {
+  animation: blink-critical 1s step-end infinite;
 }
 
 @keyframes ticker {
@@ -155,7 +265,8 @@ body,
   animation: ticker 60s linear infinite;
 }
 
-/* Recharts overrides */
+/* ── Recharts ── */
+
 .recharts-default-tooltip {
-  border-radius: 6px !important;
+  border-radius: 2px !important;
 }

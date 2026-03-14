@@ -5,14 +5,16 @@ import {
 } from 'recharts';
 import { useStore } from '../store';
 
-const COLORS = ['#22d3ee', '#f59e0b', '#10b981', '#8b5cf6', '#ef4444'];
+const COLORS = ['#00b4d8', '#ffab00', '#00e676', '#7c4dff', '#ff6e40', '#448aff'];
 const tooltipStyle = {
-  backgroundColor: '#1e293b',
-  border: '1px solid #334155',
-  borderRadius: 6,
-  fontSize: 11,
-  color: '#e2e8f0',
+  backgroundColor: '#0c1e3a',
+  border: '1px solid #1a3a5c',
+  borderRadius: 2,
+  fontSize: 10,
+  fontFamily: '"JetBrains Mono", monospace',
+  color: '#e0e8f0',
 };
+const axisProps = { fontSize: 10, fill: '#4a5e78', fontFamily: '"JetBrains Mono", monospace' };
 
 export default function AnalyticsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const vessels = useStore((s) => s.vessels);
@@ -147,34 +149,34 @@ export default function AnalyticsModal({ open, onClose }: { open: boolean; onClo
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-lg animate-fade-in">
+    <div className="fixed inset-0 z-50 bg-base animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between px-8 py-4 border-b border-slate-700/50">
-        <h1 className="text-lg font-bold text-white">
-          <span className="text-cyan-400">Analytics</span>
-          <span className="text-slate-400 font-light ml-2">Dashboard</span>
+      <div className="flex items-center justify-between px-6 py-3 border-b border-border">
+        <h1 className="text-sm font-bold uppercase tracking-widest">
+          <span className="text-accent">Analytics</span>
+          <span className="text-text-dim ml-2">Dashboard</span>
         </h1>
         <button
           onClick={onClose}
-          className="text-slate-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-slate-800/50"
+          className="text-text-dim hover:text-text-primary transition-colors p-1.5 rounded-sm hover:bg-surface-2"
         >
-          <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path d="M4 4l8 8m0-8l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
         </button>
       </div>
 
       {/* Content */}
-      <div className="p-8 h-[calc(100vh-60px)] overflow-y-auto">
-        <div className="max-w-6xl mx-auto grid grid-cols-2 gap-4">
+      <div className="p-4 h-[calc(100vh-48px)] overflow-y-auto">
+        <div className="max-w-7xl mx-auto grid grid-cols-3 gap-2">
           {/* Speed Distribution */}
           <ChartCard title="Speed Distribution (knots)">
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={speedData} margin={{ top: 8, right: 8, bottom: 0, left: -10 }}>
-                <XAxis dataKey="range" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <XAxis dataKey="range" tick={axisProps} axisLine={false} tickLine={false} />
+                <YAxis tick={axisProps} axisLine={false} tickLine={false} allowDecimals={false} />
                 <Tooltip contentStyle={tooltipStyle} />
-                <Bar dataKey="count" fill="#22d3ee" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="count" fill="#00b4d8" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -192,9 +194,9 @@ export default function AnalyticsModal({ open, onClose }: { open: boolean; onClo
               <div className="flex flex-col gap-2">
                 {directionData.map((d, i) => (
                   <div key={d.name} className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                    <span className="text-xs text-slate-400">
-                      {d.name}: <span className="text-slate-200 font-semibold">{d.value}</span>
+                    <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                    <span className="text-xs text-text-secondary">
+                      {d.name}: <span className="text-text-primary font-semibold">{d.value}</span>
                     </span>
                   </div>
                 ))}
@@ -206,10 +208,10 @@ export default function AnalyticsModal({ open, onClose }: { open: boolean; onClo
           <ChartCard title="Strait Transits (24h)">
             <ResponsiveContainer width="100%" height={180}>
               <AreaChart data={transitTimeline} margin={{ top: 8, right: 8, bottom: 0, left: -10 }}>
-                <XAxis dataKey="hour" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} interval={3} />
-                <YAxis tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <XAxis dataKey="hour" tick={axisProps} axisLine={false} tickLine={false} interval={3} />
+                <YAxis tick={axisProps} axisLine={false} tickLine={false} allowDecimals={false} />
                 <Tooltip contentStyle={tooltipStyle} />
-                <Area type="monotone" dataKey="count" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.15} strokeWidth={2} />
+                <Area type="monotone" dataKey="count" stroke="#ffab00" fill="#ffab00" fillOpacity={0.15} strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -220,10 +222,10 @@ export default function AnalyticsModal({ open, onClose }: { open: boolean; onClo
               <div className="space-y-1.5">
                 {flagData.map((d, i) => (
                   <div key={d.flag} className="flex items-center gap-2">
-                    <span className="text-xs text-slate-400 w-16 truncate">{d.flag}</span>
-                    <div className="flex-1 h-4 bg-slate-800/50 rounded-full overflow-hidden">
+                    <span className="text-xs text-text-secondary w-16 truncate">{d.flag}</span>
+                    <div className="flex-1 h-4 bg-surface-1 rounded-sm overflow-hidden">
                       <div
-                        className="h-full rounded-full transition-all"
+                        className="h-full rounded-sm transition-all"
                         style={{
                           width: `${(d.count / (flagData[0]?.count || 1)) * 100}%`,
                           backgroundColor: COLORS[i % COLORS.length],
@@ -231,12 +233,12 @@ export default function AnalyticsModal({ open, onClose }: { open: boolean; onClo
                         }}
                       />
                     </div>
-                    <span className="text-xs font-mono font-semibold text-slate-300 w-6 text-right">{d.count}</span>
+                    <span className="text-xs font-data font-semibold text-text-primary w-6 text-right">{d.count}</span>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-xs text-slate-500 text-center py-6">No vessel data</div>
+              <div className="text-xs text-text-dim text-center py-6">No vessel data</div>
             )}
           </ChartCard>
 
@@ -246,15 +248,15 @@ export default function AnalyticsModal({ open, onClose }: { open: boolean; onClo
               <div className="space-y-1.5">
                 {anomalies.map((a, i) => (
                   <div key={i} className="flex items-center gap-2 text-xs">
-                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${a.severity === 'alert' ? 'bg-red-400' : 'bg-amber-400'}`} />
-                    <span className="text-slate-400 w-24 flex-shrink-0">{a.type}</span>
-                    <span className="text-slate-200 truncate">{a.vessel}</span>
-                    <span className="text-slate-500 ml-auto flex-shrink-0">{a.detail}</span>
+                    <span className={`w-1.5 h-1.5 rounded-sm flex-shrink-0 ${a.severity === 'alert' ? 'bg-status-crit' : 'bg-status-warn'}`} />
+                    <span className="text-text-secondary w-24 flex-shrink-0">{a.type}</span>
+                    <span className="text-text-primary truncate">{a.vessel}</span>
+                    <span className="text-text-dim ml-auto flex-shrink-0">{a.detail}</span>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-xs text-slate-500 text-center py-6">No anomalies detected</div>
+              <div className="text-xs text-text-dim text-center py-6">No anomalies detected</div>
             )}
           </ChartCard>
 
@@ -273,21 +275,21 @@ export default function AnalyticsModal({ open, onClose }: { open: boolean; onClo
                   const isUp = diff > 5;
                   const isDown = diff < -5;
                   return (
-                    <div key={t.label} className="bg-slate-800/50 rounded-lg p-2.5">
-                      <div className="text-[10px] text-slate-500 mb-1">{t.label}</div>
+                    <div key={t.label} className="bg-surface-1 rounded-sm p-2.5">
+                      <div className="text-[10px] text-text-dim mb-1">{t.label}</div>
                       <div className="flex items-baseline gap-1.5">
                         <span className="text-sm font-bold text-white">{t.current}</span>
-                        <span className={`text-[10px] font-medium ${isUp ? 'text-emerald-400' : isDown ? 'text-red-400' : 'text-slate-500'}`}>
+                        <span className={`text-[10px] font-medium ${isUp ? 'text-status-nominal' : isDown ? 'text-status-crit' : 'text-text-dim'}`}>
                           {isUp ? '\u25B2' : isDown ? '\u25BC' : '\u25CF'} {Math.abs(Math.round(diff))}%
                         </span>
                       </div>
-                      <div className="text-[10px] text-slate-500">avg: {t.avg}</div>
+                      <div className="text-[10px] text-text-dim">avg: {t.avg}</div>
                     </div>
                   );
                 })}
               </div>
             ) : (
-              <div className="text-xs text-slate-500 text-center py-6">Insufficient historical data</div>
+              <div className="text-xs text-text-dim text-center py-6">Insufficient historical data</div>
             )}
           </ChartCard>
 
@@ -303,34 +305,34 @@ export default function AnalyticsModal({ open, onClose }: { open: boolean; onClo
                   ].map((s) => (
                     <div key={s.label} className="text-center">
                       <div className="text-sm font-bold text-white">{s.value}</div>
-                      <div className="text-[10px] text-slate-500">{s.label}</div>
+                      <div className="text-[10px] text-text-dim">{s.label}</div>
                     </div>
                   ))}
                 </div>
-                <div className="bg-slate-800/50 rounded-lg p-2">
-                  <div className="text-[10px] text-slate-500 mb-1.5">Normal Range ({speedProfile.count} vessels)</div>
-                  <div className="relative h-3 bg-slate-700/50 rounded-full overflow-hidden">
+                <div className="bg-surface-1 rounded-sm p-2">
+                  <div className="text-[10px] text-text-dim mb-1.5">Normal Range ({speedProfile.count} vessels)</div>
+                  <div className="relative h-3 bg-surface-1 rounded-sm overflow-hidden">
                     <div
-                      className="absolute h-full bg-cyan-500/30 rounded-full"
+                      className="absolute h-full bg-accent/30 rounded-sm"
                       style={{
                         left: `${(Math.max(0, speedProfile.normalLow) / 20) * 100}%`,
                         width: `${((speedProfile.normalHigh - Math.max(0, speedProfile.normalLow)) / 20) * 100}%`,
                       }}
                     />
                     <div
-                      className="absolute h-full w-0.5 bg-cyan-400"
+                      className="absolute h-full w-0.5 bg-accent"
                       style={{ left: `${(speedProfile.mean / 20) * 100}%` }}
                     />
                   </div>
-                  <div className="flex justify-between text-[9px] text-slate-500 mt-0.5">
+                  <div className="flex justify-between text-[9px] text-text-dim mt-0.5">
                     <span>0 kn</span>
-                    <span className="text-cyan-400">{speedProfile.normalLow}–{speedProfile.normalHigh} kn</span>
+                    <span className="text-accent">{speedProfile.normalLow}–{speedProfile.normalHigh} kn</span>
                     <span>20 kn</span>
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="text-xs text-slate-500 text-center py-6">No moving vessels</div>
+              <div className="text-xs text-text-dim text-center py-6">No moving vessels</div>
             )}
           </ChartCard>
 
@@ -339,11 +341,11 @@ export default function AnalyticsModal({ open, onClose }: { open: boolean; onClo
             <ChartCard title="Daily Transits (30d)">
               <ResponsiveContainer width="100%" height={180}>
                 <BarChart data={dailyTransitData} margin={{ top: 8, right: 8, bottom: 0, left: -10 }}>
-                  <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} interval={4} />
-                  <YAxis tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                  <XAxis dataKey="date" tick={axisProps} axisLine={false} tickLine={false} interval={4} />
+                  <YAxis tick={axisProps} axisLine={false} tickLine={false} allowDecimals={false} />
                   <Tooltip contentStyle={tooltipStyle} />
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
-                  <Bar dataKey="eastbound" fill="#22d3ee" radius={[2, 2, 0, 0]} stackId="a" />
+                  <Legend wrapperStyle={{ fontSize: 10, fontFamily: '"JetBrains Mono", monospace' }} />
+                  <Bar dataKey="eastbound" fill="#00b4d8" radius={[2, 2, 0, 0]} stackId="a" />
                   <Bar dataKey="westbound" fill="#f59e0b" radius={[2, 2, 0, 0]} stackId="a" />
                 </BarChart>
               </ResponsiveContainer>
@@ -355,12 +357,12 @@ export default function AnalyticsModal({ open, onClose }: { open: boolean; onClo
             <ChartCard title="Peak Vessels & Avg Speed (30d)">
               <ResponsiveContainer width="100%" height={180}>
                 <LineChart data={dailyStatsData} margin={{ top: 8, right: 8, bottom: 0, left: -10 }}>
-                  <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} interval={4} />
-                  <YAxis tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                  <XAxis dataKey="date" tick={axisProps} axisLine={false} tickLine={false} interval={4} />
+                  <YAxis tick={axisProps} axisLine={false} tickLine={false} />
                   <Tooltip contentStyle={tooltipStyle} />
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
-                  <Line type="monotone" dataKey="peakVessels" stroke="#10b981" strokeWidth={2} dot={false} name="Peak Vessels" />
-                  <Line type="monotone" dataKey="avgSpeed" stroke="#8b5cf6" strokeWidth={2} dot={false} name="Avg Speed (kn)" />
+                  <Legend wrapperStyle={{ fontSize: 10, fontFamily: '"JetBrains Mono", monospace' }} />
+                  <Line type="monotone" dataKey="peakVessels" stroke="#00e676" strokeWidth={2} dot={false} name="Peak Vessels" />
+                  <Line type="monotone" dataKey="avgSpeed" stroke="#7c4dff" strokeWidth={2} dot={false} name="Avg Speed (kn)" />
                 </LineChart>
               </ResponsiveContainer>
             </ChartCard>
@@ -373,11 +375,11 @@ export default function AnalyticsModal({ open, onClose }: { open: boolean; onClo
                 {historicalData.topVessels.slice(0, 10).map((v, i) => (
                   <div key={v.mmsi} className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2">
-                      <span className="text-slate-500 w-5">{i + 1}.</span>
-                      <span className="text-slate-200 truncate max-w-[180px]">{v.name}</span>
-                      <span className="text-slate-500">{v.flag}</span>
+                      <span className="text-text-dim w-5">{i + 1}.</span>
+                      <span className="text-text-primary truncate max-w-[180px]">{v.name}</span>
+                      <span className="text-text-dim">{v.flag}</span>
                     </div>
-                    <span className="text-cyan-400 font-mono font-semibold">{v.transit_count}x</span>
+                    <span className="text-accent font-data font-semibold">{v.transit_count}x</span>
                   </div>
                 ))}
               </div>
@@ -388,12 +390,12 @@ export default function AnalyticsModal({ open, onClose }: { open: boolean; onClo
           {historicalData?.dbStats && (
             <ChartCard title="Database">
               <div className="grid grid-cols-2 gap-2 text-xs">
-                <span className="text-slate-500">Positions recorded</span>
-                <span className="text-slate-300 text-right font-mono">{historicalData.dbStats.positions.toLocaleString()}</span>
-                <span className="text-slate-500">Transits detected</span>
-                <span className="text-slate-300 text-right font-mono">{historicalData.dbStats.transits.toLocaleString()}</span>
-                <span className="text-slate-500">Collecting since</span>
-                <span className="text-slate-300 text-right font-mono">
+                <span className="text-text-dim">Positions recorded</span>
+                <span className="text-text-primary text-right font-data">{historicalData.dbStats.positions.toLocaleString()}</span>
+                <span className="text-text-dim">Transits detected</span>
+                <span className="text-text-primary text-right font-data">{historicalData.dbStats.transits.toLocaleString()}</span>
+                <span className="text-text-dim">Collecting since</span>
+                <span className="text-text-primary text-right font-data">
                   {historicalData.dbStats.oldestRecord ? new Date(historicalData.dbStats.oldestRecord).toLocaleDateString() : 'N/A'}
                 </span>
               </div>
@@ -407,8 +409,8 @@ export default function AnalyticsModal({ open, onClose }: { open: boolean; onClo
 
 function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-slate-800/40 rounded-xl border border-slate-700/30 p-4">
-      <h3 className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-3">
+    <div className="bg-surface-1 rounded-sm border border-border border-t-2 border-t-accent p-2.5">
+      <h3 className="label-caps mb-2">
         {title}
       </h3>
       {children}

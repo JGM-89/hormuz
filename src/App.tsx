@@ -22,51 +22,48 @@ export default function App() {
   }, []);
 
   return (
-    <div className="h-screen w-screen relative bg-slate-950 text-slate-200 overflow-hidden select-none">
+    <div className="h-screen w-screen relative bg-base text-text-primary overflow-hidden select-none command-grid">
       {/* Map fills entire viewport */}
-      <Map />
+      <div className="absolute inset-0 map-vignette">
+        <Map />
+      </div>
 
-      {/*
-        Layout overlay: flexbox zones replace individual absolute positioning.
-        pointer-events-none lets clicks pass through to the map;
-        each zone re-enables pointer-events for its interactive children.
-      */}
-      <div className="absolute inset-0 z-10 pointer-events-none flex flex-col">
-        {/* === TOP ROW: logo | stats+outage | oil price === */}
-        <div className="flex flex-wrap items-start justify-between p-4 gap-4 flex-shrink-0">
-          <div className="pointer-events-auto flex-shrink-0">
-            <LogoPill />
-          </div>
-          <div className="pointer-events-auto flex flex-col items-center gap-2 min-w-0">
-            <FloatingStats />
-            <OutageOverlay />
-          </div>
-          <div className="pointer-events-auto flex-shrink-0">
-            <OilPriceWidget />
-          </div>
+      {/* Layout overlay — independent absolute positioning per widget group */}
+      <div className="absolute inset-0 z-10 pointer-events-none">
+        {/* TOP LEFT: Logo */}
+        <div className="absolute top-3 left-3 pointer-events-auto">
+          <LogoPill />
         </div>
 
-        {/* === MIDDLE: vessel drawer tab (left-aligned) === */}
-        <div className="flex-1 min-h-0 flex items-start px-4">
-          <div className="pointer-events-auto">
-            <VesselDrawer />
-          </div>
+        {/* TOP CENTER: Stats + Outage */}
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 pointer-events-auto flex flex-col items-center gap-1.5">
+          <FloatingStats />
+          <OutageOverlay />
         </div>
 
-        {/* === BOTTOM ROW: chokepoint | spacer | weather+analytics === */}
-        <div className="flex items-end justify-between p-4 gap-4 flex-shrink-0">
-          <div className="pointer-events-auto flex-shrink-0 max-w-[260px]">
-            <ChokePointOverlay />
-          </div>
-          <div className="flex-1" />
-          <div className="pointer-events-auto flex flex-col items-end gap-2">
-            <WeatherWidget />
-            <AnalyticsButton onClick={() => setAnalyticsOpen(true)} />
-          </div>
+        {/* TOP RIGHT: Oil Price */}
+        <div className="absolute top-3 right-3 pointer-events-auto">
+          <OilPriceWidget />
         </div>
 
-        {/* === BOTTOM TICKER: always flush bottom === */}
-        <div className="pointer-events-auto flex-shrink-0">
+        {/* LEFT: Vessel Drawer */}
+        <div className="absolute top-16 left-3 pointer-events-auto">
+          <VesselDrawer />
+        </div>
+
+        {/* BOTTOM LEFT: Choke Point */}
+        <div className="absolute bottom-11 left-3 pointer-events-auto max-w-[260px]">
+          <ChokePointOverlay />
+        </div>
+
+        {/* BOTTOM RIGHT: Weather + Analytics */}
+        <div className="absolute bottom-11 right-3 pointer-events-auto flex flex-col items-end gap-1.5">
+          <WeatherWidget />
+          <AnalyticsButton onClick={() => setAnalyticsOpen(true)} />
+        </div>
+
+        {/* BOTTOM TICKER: full width, flush bottom */}
+        <div className="absolute bottom-0 inset-x-0 pointer-events-auto">
           <NewsTicker />
         </div>
       </div>
@@ -83,7 +80,7 @@ export default function App() {
 function AnalyticsButton({ onClick }: { onClick: () => void }) {
   return (
     <Widget
-      className="cursor-pointer hover:bg-slate-800/80 active:bg-slate-700/80 transition-colors group"
+      className="cursor-pointer hover:bg-surface-2 active:bg-surface-1 transition-colors group"
       role="button"
       tabIndex={0}
       aria-label="Open analytics dashboard"
@@ -91,12 +88,12 @@ function AnalyticsButton({ onClick }: { onClick: () => void }) {
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
     >
       <div className="flex items-center gap-2">
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="text-slate-400 group-hover:text-cyan-400 transition-colors" aria-hidden="true">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="text-text-dim group-hover:text-accent transition-colors" aria-hidden="true">
           <rect x="1" y="8" width="3" height="7" rx="0.5" fill="currentColor" opacity="0.6" />
           <rect x="5.5" y="5" width="3" height="10" rx="0.5" fill="currentColor" opacity="0.8" />
           <rect x="10" y="1" width="3" height="14" rx="0.5" fill="currentColor" />
         </svg>
-        <span className="text-xs text-slate-400 group-hover:text-cyan-400 transition-colors uppercase tracking-wider font-semibold">Analytics</span>
+        <span className="text-[11px] text-text-dim group-hover:text-accent transition-colors uppercase tracking-widest font-semibold">Analytics</span>
       </div>
     </Widget>
   );

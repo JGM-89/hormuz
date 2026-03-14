@@ -9,19 +9,19 @@ export default function LogoPill() {
   const statusLabel = aisHealth?.status === 'outage' ? 'Outage' : isLive ? 'Live' : 'Offline';
 
   return (
-    <Widget variant="pill" role="banner" aria-label={`Hormuz Tracker — ${statusLabel}`}>
+    <Widget variant="pill" severity="none" role="banner" aria-label={`Hormuz Tracker — ${statusLabel}`}>
       <div className="flex items-center gap-2.5">
-        <div className="text-sm font-bold tracking-tight">
-          <span className="text-cyan-400">HORMUZ</span>
-          <span className="text-slate-400 font-light ml-1">TRACKER</span>
+        <div className="text-xs font-bold">
+          <span className="text-accent tracking-widest">HORMUZ</span>
+          <span className="text-text-dim tracking-widest ml-1">TRACKER</span>
         </div>
-        <div className="h-4 w-px bg-slate-700" aria-hidden="true" />
+        <div className="h-4 w-px bg-border" aria-hidden="true" />
         <div className="flex items-center gap-1.5">
           <div
-            className={`w-2 h-2 rounded-full ${isLive ? 'bg-emerald-400 animate-pulse' : 'bg-red-500'}`}
+            className={`led ${isLive ? 'led-live' : 'led-crit'} ${isLive ? 'animate-pulse-radar' : ''}`}
             aria-hidden="true"
           />
-          <span className={`text-xs font-medium uppercase tracking-wider ${isLive ? 'text-emerald-400' : 'text-red-400'}`}>
+          <span className={`text-[10px] font-semibold uppercase tracking-widest ${isLive ? 'text-status-nominal' : 'text-status-crit'}`}>
             {statusLabel}
           </span>
         </div>

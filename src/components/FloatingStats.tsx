@@ -8,11 +8,11 @@ export default function FloatingStats() {
   const connected = useStore((s) => s.connected);
   const congestion = getCongestionLevel(stats.totalVessels);
 
-  const statusConfig: Record<string, { color: string; textColor: string; label: string }> = {
-    live: { color: 'bg-emerald-400', textColor: 'text-emerald-400', label: 'AIS Live' },
-    outage: { color: 'bg-red-500', textColor: 'text-red-400', label: 'AIS Outage' },
-    waiting: { color: 'bg-amber-400', textColor: 'text-amber-400', label: 'Waiting' },
-    connecting: { color: 'bg-amber-400', textColor: 'text-amber-400', label: 'Connecting' },
+  const statusConfig: Record<string, { ledClass: string; textColor: string; label: string }> = {
+    live: { ledClass: 'led-live', textColor: 'text-status-nominal', label: 'AIS LIVE' },
+    outage: { ledClass: 'led-crit', textColor: 'text-status-crit', label: 'AIS OUTAGE' },
+    waiting: { ledClass: 'led-warn', textColor: 'text-status-warn', label: 'WAITING' },
+    connecting: { ledClass: 'led-warn', textColor: 'text-status-warn', label: 'CONNECTING' },
   };
 
   const status = aisHealth ? statusConfig[aisHealth.status] : null;
@@ -20,10 +20,11 @@ export default function FloatingStats() {
   return (
     <Widget
       variant="pill"
+      severity="none"
       role="status"
       aria-label={`Dashboard status: ${stats.totalVessels} vessels tracked`}
     >
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         {/* AIS Status */}
         {status ? (
           <div
@@ -35,16 +36,16 @@ export default function FloatingStats() {
             }
             aria-label={`AIS status: ${status.label}`}
           >
-            <div className={`w-2 h-2 rounded-full ${status.color} ${aisHealth?.status === 'live' ? 'animate-pulse' : ''}`} />
-            <span className={`text-xs font-semibold uppercase tracking-wider ${status.textColor}`}>
+            <div className={`led ${status.ledClass}`} />
+            <span className={`text-[10px] font-semibold uppercase tracking-widest ${status.textColor}`}>
               {status.label}
             </span>
           </div>
         ) : (
           <div className="flex items-center gap-1.5" aria-label={`Connection: ${connected ? 'Connected' : 'Offline'}`}>
-            <div className={`w-2 h-2 rounded-full ${connected ? 'bg-emerald-400 animate-pulse' : 'bg-red-500'}`} />
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-              {connected ? 'Connected' : 'Offline'}
+            <div className={`led ${connected ? 'led-live' : 'led-crit'}`} />
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-text-dim">
+              {connected ? 'CONNECTED' : 'OFFLINE'}
             </span>
           </div>
         )}
@@ -52,21 +53,27 @@ export default function FloatingStats() {
         <Divider />
 
         {/* Hero metric: vessel count */}
-        <div className="flex items-baseline gap-1.5" title="Total vessels currently tracked in the strait">
-          <span className="text-lg font-bold tabular-nums text-white">{stats.totalVessels}</span>
-          <span className="text-xs text-slate-400">Vessels</span>
+        <div className="flex items-baseline gap-1" title="Total vessels currently tracked in the strait">
+          <span className="text-lg font-bold font-data text-white">{stats.totalVessels}</span>
+          <span className="text-[10px] text-text-dim uppercase tracking-widest">Vessels</span>
         </div>
 
         <Divider />
 
-        <Stat value={stats.inTransit} label="Transit" accent="cyan" title="Vessels currently moving through the strait" />
+        <Stat value={stats.inTransit} label="Transit" accent title="Vessels currently moving through the strait" />
         <Stat value={`${stats.avgSpeed}`} label="kn avg" title="Average speed of moving vessels" />
 
         <Divider />
 
         <div className="flex items-center gap-1.5" title={`Congestion level: ${congestion.label}`}>
-          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: congestion.color }} />
-          <span className="text-xs font-semibold" style={{ color: congestion.color }}>
+          <div
+            className="led"
+            style={{
+              background: congestion.color,
+              boxShadow: `0 0 6px ${congestion.color}, 0 0 12px ${congestion.color}40`,
+            }}
+          />
+          <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: congestion.color }}>
             {congestion.label}
           </span>
         </div>
@@ -75,16 +82,15 @@ export default function FloatingStats() {
   );
 }
 
-function Stat({ value, label, accent, title }: { value: string | number; label: string; accent?: string; title?: string }) {
-  const color = accent === 'cyan' ? 'text-cyan-400' : 'text-white';
+function Stat({ value, label, accent, title }: { value: string | number; label: string; accent?: boolean; title?: string }) {
   return (
     <div className="flex items-baseline gap-1" title={title}>
-      <span className={`text-sm font-bold tabular-nums ${color}`}>{value}</span>
-      <span className="text-xs text-slate-500">{label}</span>
+      <span className={`text-sm font-bold font-data ${accent ? 'text-accent' : 'text-white'}`}>{value}</span>
+      <span className="text-[10px] text-text-dim uppercase tracking-widest">{label}</span>
     </div>
   );
 }
 
 function Divider() {
-  return <div className="h-4 w-px bg-slate-700" aria-hidden="true" />;
+  return <div className="h-4 w-px bg-border" aria-hidden="true" />;
 }

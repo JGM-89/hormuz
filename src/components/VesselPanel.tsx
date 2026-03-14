@@ -16,25 +16,25 @@ export default function VesselPanel() {
   const speedColor = getSpeedColor(vessel.speed);
   const isEastbound = vessel.course >= 0 && vessel.course < 180;
   const direction = isEastbound ? 'Eastbound' : 'Westbound';
-  const dirColor = isEastbound ? '#22d3ee' : '#f59e0b';
+  const dirColor = isEastbound ? '#00b4d8' : '#ffab00';
   const progress = getTransitProgress(vessel.lon, vessel.course);
 
   return (
     <div
-      className="absolute top-0 right-0 h-full w-[400px] bg-slate-900/95 backdrop-blur-md border-l border-slate-700/50 z-20 overflow-y-auto shadow-2xl animate-slide-in"
+      className="absolute top-0 right-0 h-full w-[400px] bg-surface-0 border-l border-border z-20 overflow-y-auto animate-slide-in"
       role="dialog"
       aria-label={`Vessel details: ${vessel.name}`}
     >
       {/* Header */}
-      <div className="sticky top-0 bg-slate-900/95 backdrop-blur-md border-b border-slate-700/50 p-4">
+      <div className="sticky top-0 bg-surface-0 border-b border-border p-3">
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
-            <h2 className="text-base font-bold text-white leading-tight truncate">{vessel.name}</h2>
-            <p className="text-xs text-slate-400 mt-0.5 font-mono">MMSI: {vessel.mmsi}</p>
+            <h2 className="text-sm font-bold text-white uppercase tracking-wide leading-tight truncate">{vessel.name}</h2>
+            <p className="text-[10px] text-text-dim mt-0.5 font-data">MMSI {vessel.mmsi}</p>
           </div>
           <button
             onClick={() => setSelectedVessel(null)}
-            className="text-slate-400 hover:text-white transition-colors p-1 ml-2 rounded focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+            className="text-text-dim hover:text-text-primary transition-colors p-1 ml-2 rounded-sm hover:bg-surface-2"
             aria-label="Close vessel details"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -45,26 +45,26 @@ export default function VesselPanel() {
 
         {/* Direction banner */}
         <div
-          className="mt-3 flex items-center gap-3 rounded-lg px-3 py-2"
-          style={{ backgroundColor: `${dirColor}10`, border: `1px solid ${dirColor}30` }}
+          className="mt-2 flex items-center gap-3 rounded-sm px-2.5 py-1.5 border-l-2"
+          style={{ backgroundColor: `${dirColor}10`, borderLeftColor: dirColor }}
           aria-label={`${direction}, ${vessel.speed > 0.5 ? 'in transit' : 'stationary'}`}
         >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" style={{ transform: isEastbound ? 'none' : 'scaleX(-1)' }} aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ transform: isEastbound ? 'none' : 'scaleX(-1)' }} aria-hidden="true">
             <path d="M5 12h14m-4-4l4 4-4 4" stroke={dirColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           <div>
-            <div className="text-sm font-bold uppercase tracking-wider" style={{ color: dirColor }}>{direction}</div>
-            <div className="text-xs text-slate-400">{vessel.speed > 0.5 ? 'In transit' : 'Stationary'}</div>
+            <div className="text-[11px] font-bold uppercase tracking-widest" style={{ color: dirColor }}>{direction}</div>
+            <div className="text-[10px] text-text-dim">{vessel.speed > 0.5 ? 'In transit' : 'Stationary'}</div>
           </div>
         </div>
       </div>
 
-      <div className="p-4 space-y-4">
+      <div className="p-3 space-y-3">
         {/* Navigation gauges */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-1.5">
           <GaugeCard label="Speed" value={formatSpeed(vessel.speed)} color={speedColor} />
-          <GaugeCard label="Course" value={`${vessel.course.toFixed(0)}\u00b0`} color="#22d3ee" />
-          <GaugeCard label="Heading" value={`${vessel.heading.toFixed(0)}\u00b0`} color="#8b5cf6" />
+          <GaugeCard label="Course" value={`${vessel.course.toFixed(0)}\u00b0`} color="#00b4d8" />
+          <GaugeCard label="Heading" value={`${vessel.heading.toFixed(0)}\u00b0`} color="#7c4dff" />
         </div>
 
         {/* Speed sparkline */}
@@ -77,7 +77,7 @@ export default function VesselPanel() {
         {/* Transit progress */}
         <Section title="Transit Progress">
           <div
-            className="relative h-2 bg-slate-800 rounded-full overflow-hidden"
+            className="relative h-1.5 bg-surface-1 rounded-sm overflow-hidden"
             role="progressbar"
             aria-valuenow={Math.round(progress)}
             aria-valuemin={0}
@@ -85,14 +85,14 @@ export default function VesselPanel() {
             aria-label={`Transit progress: ${Math.round(progress)}%`}
           >
             <div
-              className="absolute inset-y-0 left-0 rounded-full transition-all"
+              className="absolute inset-y-0 left-0 rounded-sm transition-all"
               style={{ width: `${progress}%`, backgroundColor: dirColor }}
             />
           </div>
           <div className="flex justify-between mt-1">
-            <span className="text-xs text-slate-500">Gulf of Oman</span>
-            <span className="text-xs font-semibold tabular-nums" style={{ color: dirColor }}>{Math.round(progress)}%</span>
-            <span className="text-xs text-slate-500">Persian Gulf</span>
+            <span className="text-[10px] text-text-dim">Gulf of Oman</span>
+            <span className="text-[10px] font-semibold font-data" style={{ color: dirColor }}>{Math.round(progress)}%</span>
+            <span className="text-[10px] text-text-dim">Persian Gulf</span>
           </div>
         </Section>
 
@@ -101,8 +101,8 @@ export default function VesselPanel() {
           <InfoRow label="Type" value={vessel.shipTypeLabel} />
           <InfoRow label="Flag" value={vessel.flag || 'Unknown'} />
           <InfoRow label="Status" value={getNavStatusLabel(vessel.navStatus)} />
-          <InfoRow label="Position" value={`${vessel.lat.toFixed(4)}\u00b0N, ${vessel.lon.toFixed(4)}\u00b0E`} />
-          <InfoRow label="Last Update" value={timeAgo(vessel.lastUpdate)} />
+          <InfoRow label="Position" value={`${vessel.lat.toFixed(4)}\u00b0N, ${vessel.lon.toFixed(4)}\u00b0E`} mono />
+          <InfoRow label="Last Update" value={timeAgo(vessel.lastUpdate)} mono />
         </Section>
 
         {/* Nearby vessels */}
@@ -128,21 +128,21 @@ function NearbyVessels({ currentMmsi, lat, lon }: { currentMmsi: string; lat: nu
 
   return (
     <Section title="Nearby Vessels">
-      <div className="space-y-1" role="list">
+      <div className="space-y-0.5" role="list">
         {nearby.map((v) => (
           <button
             key={v.mmsi}
             onClick={() => setSelectedVessel(v.mmsi)}
             role="listitem"
-            className="w-full flex items-center justify-between text-xs py-1.5 px-1 rounded hover:bg-slate-800/50 transition-colors focus:outline-none focus:bg-slate-800/50"
+            className="w-full flex items-center justify-between text-[11px] py-1.5 px-1.5 rounded-sm hover:bg-surface-1 transition-colors focus:outline-none focus:bg-surface-1"
             aria-label={`${v.name}, ${formatSpeed(v.speed)}, ${v.dist.toFixed(1)} nautical miles away`}
           >
-            <span className="text-slate-300 truncate max-w-[180px]">{v.name}</span>
+            <span className="text-text-primary truncate max-w-[180px]">{v.name}</span>
             <div className="flex items-center gap-2">
-              <span style={{ color: getSpeedColor(v.speed) }} className="font-mono text-xs tabular-nums">
+              <span style={{ color: getSpeedColor(v.speed) }} className="font-data text-[11px]">
                 {formatSpeed(v.speed)}
               </span>
-              <span className="text-slate-500 font-mono text-xs tabular-nums">
+              <span className="text-text-dim font-data text-[10px]">
                 {v.dist.toFixed(1)}nm
               </span>
             </div>
@@ -156,7 +156,7 @@ function NearbyVessels({ currentMmsi, lat, lon }: { currentMmsi: string; lat: nu
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <h3 className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-2">
+      <h3 className="label-caps border-b border-border-dim pb-1 mb-2">
         {title}
       </h3>
       {children}
@@ -164,20 +164,20 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
+function InfoRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
-    <div className="flex justify-between py-1.5 border-b border-slate-800/50">
-      <span className="text-xs text-slate-400">{label}</span>
-      <span className="text-xs text-slate-200 font-medium">{value}</span>
+    <div className="flex justify-between py-1.5 border-b border-border-dim">
+      <span className="text-[10px] text-text-dim uppercase tracking-wider">{label}</span>
+      <span className={`text-[11px] text-text-primary font-medium ${mono ? 'font-data' : ''}`}>{value}</span>
     </div>
   );
 }
 
 function GaugeCard({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <div className="bg-slate-800/50 rounded-lg p-2.5 border border-slate-700/30">
-      <div className="text-xs text-slate-500 uppercase tracking-wider">{label}</div>
-      <div className="text-sm font-bold mt-0.5 tabular-nums" style={{ color }}>{value}</div>
+    <div className="bg-surface-1 rounded-sm p-2 border border-border-dim">
+      <div className="label-caps">{label}</div>
+      <div className="text-sm font-bold mt-0.5 font-data" style={{ color }}>{value}</div>
     </div>
   );
 }

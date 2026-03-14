@@ -64,17 +64,17 @@ export default function VesselDrawer() {
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="bg-slate-900/80 backdrop-blur-md border border-slate-700/50 rounded-lg px-3 py-2 shadow-xl hover:bg-slate-800/80 transition-colors group focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+          className="bg-surface-0 border border-border rounded-sm px-2.5 py-1.5 hover:bg-surface-2 transition-colors group"
           aria-label={`Open vessel list. ${vessels.size} vessels tracked`}
         >
           <div className="flex items-center gap-2">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="text-cyan-400" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="text-accent" aria-hidden="true">
               <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
-            <span className="text-xs font-medium text-slate-300">
+            <span className="text-[11px] font-medium text-text-secondary uppercase tracking-wider">
               Vessels
             </span>
-            <span className="text-xs font-bold text-cyan-400 bg-cyan-400/10 rounded-full px-1.5 py-0.5 tabular-nums">
+            <span className="text-[10px] font-bold text-accent bg-accent/15 rounded-sm px-1.5 py-0.5 font-data">
               {vessels.size}
             </span>
           </div>
@@ -84,18 +84,18 @@ export default function VesselDrawer() {
       {/* Expanded drawer */}
       {open && (
         <div
-          className="absolute top-0 left-0 h-full w-80 z-20 flex flex-col bg-slate-900/95 backdrop-blur-md border-r border-slate-700/50 shadow-2xl animate-slide-in-left"
+          className="absolute top-0 left-0 h-full w-80 z-20 flex flex-col bg-surface-0 border-r border-border animate-slide-in-left"
           role="dialog"
           aria-label="Vessel list"
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-3 border-b border-slate-700/50">
-            <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+          <div className="flex items-center justify-between p-2.5 border-b border-border">
+            <h2 className="label-caps">
               Vessels ({sorted.length})
             </h2>
             <button
               onClick={() => setOpen(false)}
-              className="text-slate-400 hover:text-white transition-colors p-1 rounded focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+              className="text-text-dim hover:text-text-primary transition-colors p-1 rounded-sm hover:bg-surface-2"
               aria-label="Close vessel list"
             >
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -105,29 +105,29 @@ export default function VesselDrawer() {
           </div>
 
           {/* Filter */}
-          <div className="px-3 py-2 border-b border-slate-700/50">
+          <div className="px-2.5 py-2 border-b border-border-dim">
             <input
               type="text"
               placeholder="Filter by name, MMSI, flag..."
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              className="w-full bg-slate-800/50 border border-slate-700/50 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/30 transition-colors"
+              className="w-full bg-surface-1 border border-border rounded-sm px-2.5 py-1.5 text-[11px] text-text-primary placeholder-text-dim focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30 transition-colors"
               aria-label="Filter vessels"
             />
           </div>
 
           {/* Category filter */}
-          <div className="flex gap-1 px-3 py-1.5 border-b border-slate-800/50" role="tablist" aria-label="Vessel categories">
+          <div className="flex gap-1 px-2.5 py-1.5 border-b border-border-dim" role="tablist" aria-label="Vessel categories">
             {(Object.keys(CATEGORY_LABELS) as CategoryFilter[]).map((cat) => (
               <button
                 key={cat}
                 onClick={() => setCategoryFilter(cat)}
                 role="tab"
                 aria-selected={categoryFilter === cat}
-                className={`text-xs px-2 py-0.5 rounded transition-colors focus:outline-none focus:ring-1 focus:ring-cyan-500/50 ${
+                className={`text-[10px] px-2 py-0.5 rounded-sm transition-colors uppercase tracking-wider font-semibold ${
                   categoryFilter === cat
-                    ? 'bg-cyan-500/20 text-cyan-400'
-                    : 'text-slate-500 hover:text-slate-300'
+                    ? 'bg-accent/15 text-accent'
+                    : 'text-text-dim hover:text-text-secondary'
                 }`}
               >
                 {CATEGORY_LABELS[cat]}
@@ -136,15 +136,15 @@ export default function VesselDrawer() {
           </div>
 
           {/* Sort */}
-          <div className="flex gap-1 px-3 py-1.5 border-b border-slate-800/50" role="group" aria-label="Sort vessels by">
+          <div className="flex gap-1 px-2.5 py-1.5 border-b border-border-dim" role="group" aria-label="Sort vessels by">
             {(['name', 'speed', 'lastUpdate'] as SortKey[]).map((key) => (
               <button
                 key={key}
                 onClick={() => toggleSort(key)}
-                className={`text-xs px-2 py-0.5 rounded transition-colors focus:outline-none focus:ring-1 focus:ring-cyan-500/50 ${
+                className={`text-[10px] px-2 py-0.5 rounded-sm transition-colors uppercase tracking-wider font-semibold ${
                   sortKey === key
-                    ? 'bg-cyan-500/20 text-cyan-400'
-                    : 'text-slate-500 hover:text-slate-300'
+                    ? 'bg-accent/15 text-accent'
+                    : 'text-text-dim hover:text-text-secondary'
                 }`}
                 aria-label={`Sort by ${key === 'lastUpdate' ? 'recent' : key}${sortKey === key ? (sortAsc ? ', ascending' : ', descending') : ''}`}
               >
@@ -157,7 +157,7 @@ export default function VesselDrawer() {
           {/* List */}
           <div className="flex-1 overflow-y-auto" role="list">
             {sorted.length === 0 ? (
-              <div className="flex items-center justify-center h-32 text-slate-500 text-xs">
+              <div className="flex items-center justify-center h-32 text-text-dim text-[11px]">
                 {filter ? 'No vessels match filter' : 'No vessel data'}
               </div>
             ) : (
@@ -167,28 +167,28 @@ export default function VesselDrawer() {
                   onClick={() => { setSelectedVessel(vessel.mmsi); setOpen(false); }}
                   role="listitem"
                   aria-label={`${vessel.name}, ${formatSpeed(vessel.speed)}, ${vessel.flag || 'Unknown flag'}`}
-                  className={`w-full text-left px-3 py-2.5 border-b border-slate-800/30 transition-colors focus:outline-none focus:bg-slate-800/50 ${
+                  className={`w-full text-left px-2.5 py-2 border-b border-border-dim transition-colors focus:outline-none focus:bg-surface-2 ${
                     selectedVessel === vessel.mmsi
-                      ? 'bg-cyan-500/10 border-l-2 border-l-cyan-400'
-                      : 'hover:bg-slate-800/50 border-l-2 border-l-transparent'
+                      ? 'bg-accent/10 border-l-2 border-l-accent'
+                      : 'hover:bg-surface-1 border-l-2 border-l-transparent'
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-slate-200 truncate max-w-[160px]">
+                    <span className="text-[11px] font-medium text-text-primary truncate max-w-[160px]">
                       {vessel.name}
                     </span>
                     <span
-                      className="text-xs font-mono font-semibold tabular-nums"
+                      className="text-[11px] font-data font-semibold"
                       style={{ color: getSpeedColor(vessel.speed) }}
                     >
                       {formatSpeed(vessel.speed)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between mt-0.5">
-                    <span className="text-xs text-slate-500">
+                    <span className="text-[10px] text-text-dim">
                       {vessel.flag || 'Unknown'} &middot; {vessel.shipTypeLabel}
                     </span>
-                    <span className="text-xs text-slate-500">{timeAgo(vessel.lastUpdate)}</span>
+                    <span className="text-[10px] text-text-dim font-data">{timeAgo(vessel.lastUpdate)}</span>
                   </div>
                 </button>
               ))

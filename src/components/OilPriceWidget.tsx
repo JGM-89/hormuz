@@ -53,14 +53,12 @@ export default function OilPriceWidget() {
       role="region"
       aria-label={`Brent Crude: $${oilPrice.price.toFixed(2)}, ${isUp ? 'up' : 'down'} ${Math.abs(oilPrice.changePercent).toFixed(1)}%`}
     >
-      <div className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">
-        Brent Crude
-      </div>
+      <div className="label-caps mb-1">Brent Crude</div>
       <div className="flex items-baseline gap-2">
-        <span className="text-lg font-bold text-white font-mono">
+        <span className="text-base font-bold text-white font-data">
           ${oilPrice.price.toFixed(2)}
         </span>
-        <span className={`text-xs font-medium ${isUp ? 'text-emerald-400' : 'text-red-400'}`}>
+        <span className={`text-[11px] font-data font-medium ${isUp ? 'text-status-nominal' : 'text-status-crit'}`}>
           {isUp ? '+' : ''}{oilPrice.change.toFixed(2)} ({isUp ? '+' : ''}{oilPrice.changePercent.toFixed(1)}%)
         </span>
       </div>
