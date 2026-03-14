@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts';
 import { useStore } from '../store';
 import { getSeverity, getSeverityColor, formatCommodityPrice, computeRiskPremium, HORMUZ_SENSITIVITY } from '../utils/commodities';
+import { TrendingUp, TrendingDown } from 'lucide-react';
 import type { CommodityData, CommodityPricePoint } from '../types';
 
 // Fallback mock data when server proxy is unavailable
@@ -80,9 +81,9 @@ export default function CommodityPanel() {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-border-dim">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border-dim">
         <span className="label-caps">Commodities</span>
-        <span className={`text-[9px] font-data uppercase tracking-wider ${isLive ? 'text-status-nominal' : 'text-status-warn'}`}>
+        <span className={`text-[10px] font-data uppercase tracking-wider ${isLive ? 'text-status-nominal' : 'text-status-warn'}`}>
           {isLive ? 'LIVE' : 'MOCK'}
         </span>
       </div>
@@ -100,7 +101,7 @@ export default function CommodityPanel() {
       </div>
 
       {/* Hormuz Risk Premium */}
-      <div className="px-2.5 py-2 border-t border-border-dim">
+      <div className="px-3 py-2.5 border-t border-border-dim">
         <RiskPremiumCard premium={riskPremium} />
       </div>
     </div>
@@ -126,7 +127,7 @@ function CommodityRow({
       {/* Collapsed row */}
       <button
         onClick={onToggle}
-        className="w-full flex items-center gap-1.5 px-2.5 py-2 hover:bg-surface-1 transition-colors cursor-pointer text-left"
+        className="w-full flex items-center gap-1.5 px-3 py-2.5 hover:bg-surface-1 transition-colors cursor-pointer text-left"
         aria-expanded={expanded}
         aria-label={`${c.name}: ${formatCommodityPrice(c.price, c.symbol)} ${c.unit}, ${isUp ? 'up' : 'down'} ${Math.abs(c.changePercent).toFixed(1)}%`}
       >
@@ -165,17 +166,18 @@ function CommodityRow({
           {isUp ? '+' : ''}{c.changePercent.toFixed(1)}%
         </span>
 
-        {/* Severity dot */}
-        <div
-          className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-          style={{ backgroundColor: sevColor, boxShadow: severity !== 'nominal' ? `0 0 4px ${sevColor}` : 'none' }}
-        />
+        {/* Trend icon */}
+        {isUp ? (
+          <TrendingUp size={12} className="flex-shrink-0" style={{ color: sevColor }} />
+        ) : (
+          <TrendingDown size={12} className="flex-shrink-0" style={{ color: sevColor }} />
+        )}
       </button>
 
       {/* Expanded detail card */}
       {expanded && (
-        <div className="px-2.5 pb-2.5 animate-fade-in">
-          <div className="bg-surface-1 rounded-sm border border-border-dim p-2 space-y-2">
+        <div className="px-3 pb-3 animate-fade-in">
+          <div className="bg-surface-1 rounded-sm border border-border-dim p-2.5 space-y-2.5">
             {/* Full name */}
             <div className="flex items-baseline justify-between">
               <span className="text-[11px] text-text-primary font-medium">{c.name}</span>
@@ -247,7 +249,7 @@ function CommodityRow({
 function OHLCCell({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
     <div className="text-center">
-      <div className="text-[8px] text-text-dim uppercase tracking-wider">{label}</div>
+      <div className="text-[9px] text-text-dim uppercase tracking-wider">{label}</div>
       <div className="text-[11px] font-data font-bold" style={{ color: color || '#e0e8f0' }}>{value}</div>
     </div>
   );

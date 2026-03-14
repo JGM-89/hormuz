@@ -42,7 +42,7 @@ export default function App() {
   return (
     <div className="h-screen w-screen flex flex-col bg-base text-text-primary overflow-hidden select-none command-grid">
       {/* ── TOP BAR ── */}
-      <header className="flex items-center justify-between px-3 py-2 bg-surface-0 border-b border-border flex-shrink-0 z-30">
+      <header className="flex items-center justify-between px-4 py-2.5 bg-surface-0 border-b border-border flex-shrink-0 z-30">
         <div className="flex items-center gap-3">
           <LogoPill />
         </div>

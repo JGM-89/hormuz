@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAudio } from '../hooks/useAudio';
+import { Volume2, VolumeX, Waves, Radar, Radio, Zap } from 'lucide-react';
 
 export default function AudioController() {
   const audio = useAudio();
@@ -42,24 +43,24 @@ export default function AudioController() {
         aria-label={audio.enabled ? 'Audio enabled — click for settings' : 'Enable audio'}
       >
         {audio.enabled ? (
-          <SpeakerOnIcon />
+          <Volume2 size={14} />
         ) : (
-          <SpeakerOffIcon />
+          <VolumeX size={14} />
         )}
-        <span className="text-[10px] font-semibold uppercase tracking-widest hidden sm:inline">
+        <span className="text-[11px] font-semibold uppercase tracking-widest hidden sm:inline">
           {audio.enabled ? 'AUDIO' : 'MUTED'}
         </span>
       </button>
 
       {/* Settings panel */}
       {showPanel && audio.enabled && (
-        <div className="absolute top-full right-0 mt-1 w-56 bg-surface-0 border border-border rounded-sm shadow-lg z-50 animate-fade-in">
-          <div className="p-2.5 space-y-2.5">
+        <div className="absolute top-full right-0 mt-1 w-60 bg-surface-0 border border-border rounded-sm shadow-lg z-50 animate-fade-in">
+          <div className="p-3 space-y-3">
             {/* Master volume */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <span className="label-caps">Volume</span>
-                <span className="text-[10px] font-data text-text-dim">{Math.round(audio.volume * 100)}%</span>
+                <span className="label-caps">Master Volume</span>
+                <span className="text-[11px] font-data text-text-dim">{Math.round(audio.volume * 100)}%</span>
               </div>
               <input
                 type="range"
@@ -72,16 +73,42 @@ export default function AudioController() {
               />
             </div>
 
-            {/* Ambient toggle */}
+            {/* Ambient section header */}
+            <div className="label-caps text-text-dim pt-1">Ambient Layers</div>
+
+            {/* Ocean waves */}
             <ToggleRow
-              label="VHF Radio"
-              sublabel="Marine radio chatter"
-              enabled={audio.ambientEnabled}
-              onToggle={audio.toggleAmbient}
+              icon={<Waves size={13} />}
+              label="Ambience"
+              sublabel="Sea state & radio static"
+              enabled={audio.oceanEnabled}
+              onToggle={audio.toggleOcean}
             />
 
-            {/* UI sounds toggle */}
+            {/* Sonar ping */}
             <ToggleRow
+              icon={<Radar size={13} />}
+              label="Sonar Ping"
+              sublabel="Periodic naval ping"
+              enabled={audio.sonarEnabled}
+              onToggle={audio.toggleSonar}
+            />
+
+            {/* Marine radio */}
+            <ToggleRow
+              icon={<Radio size={13} />}
+              label="Marine VHF"
+              sublabel="Live shipping radio"
+              enabled={audio.radioEnabled}
+              onToggle={audio.toggleRadio}
+            />
+
+            {/* Divider */}
+            <div className="h-px bg-border-dim" />
+
+            {/* UI sounds */}
+            <ToggleRow
+              icon={<Zap size={13} />}
               label="UI Sounds"
               sublabel="Pings & alerts"
               enabled={audio.uiSoundsEnabled}
@@ -91,17 +118,17 @@ export default function AudioController() {
             {/* Test sound */}
             <button
               onClick={() => audio.playSound('ping')}
-              className="w-full text-[10px] text-text-dim hover:text-accent uppercase tracking-wider font-semibold py-1.5 rounded-sm hover:bg-surface-1 transition-colors"
+              className="w-full text-[11px] text-text-dim hover:text-accent uppercase tracking-wider font-semibold py-1.5 rounded-sm hover:bg-surface-1 transition-colors"
             >
               ▶ Test Ping
             </button>
           </div>
 
           {/* Mute button */}
-          <div className="border-t border-border-dim px-2.5 py-2">
+          <div className="border-t border-border-dim px-3 py-2">
             <button
               onClick={() => { audio.toggle(); setShowPanel(false); }}
-              className="w-full text-[10px] text-status-crit hover:text-status-crit/80 uppercase tracking-wider font-semibold py-1 rounded-sm hover:bg-surface-1 transition-colors"
+              className="w-full text-[11px] text-status-crit hover:text-status-crit/80 uppercase tracking-wider font-semibold py-1 rounded-sm hover:bg-surface-1 transition-colors"
             >
               Mute All
             </button>
@@ -112,7 +139,8 @@ export default function AudioController() {
   );
 }
 
-function ToggleRow({ label, sublabel, enabled, onToggle }: {
+function ToggleRow({ icon, label, sublabel, enabled, onToggle }: {
+  icon: React.ReactNode;
   label: string;
   sublabel: string;
   enabled: boolean;
@@ -124,9 +152,14 @@ function ToggleRow({ label, sublabel, enabled, onToggle }: {
       className="flex items-center justify-between w-full py-1 group"
       aria-label={`${label}: ${enabled ? 'on' : 'off'}`}
     >
-      <div>
-        <div className="text-[11px] text-text-primary font-medium text-left">{label}</div>
-        <div className="text-[9px] text-text-dim text-left">{sublabel}</div>
+      <div className="flex items-center gap-2">
+        <span className={`${enabled ? 'text-accent' : 'text-text-dim'} transition-colors`}>
+          {icon}
+        </span>
+        <div>
+          <div className="text-xs text-text-primary font-medium text-left">{label}</div>
+          <div className="text-[10px] text-text-dim text-left">{sublabel}</div>
+        </div>
       </div>
       <div
         className={`w-7 h-4 rounded-sm relative transition-colors ${
@@ -140,23 +173,5 @@ function ToggleRow({ label, sublabel, enabled, onToggle }: {
         />
       </div>
     </button>
-  );
-}
-
-function SpeakerOnIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path d="M2 5.5h2.5L8 2.5v11l-3.5-3H2a.5.5 0 01-.5-.5V6a.5.5 0 01.5-.5z" fill="currentColor" />
-      <path d="M10.5 4.5a4.5 4.5 0 010 7M12 2.5a7 7 0 010 11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" fill="none" />
-    </svg>
-  );
-}
-
-function SpeakerOffIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path d="M2 5.5h2.5L8 2.5v11l-3.5-3H2a.5.5 0 01-.5-.5V6a.5.5 0 01.5-.5z" fill="currentColor" />
-      <path d="M11 5.5l4 5M15 5.5l-4 5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-    </svg>
   );
 }

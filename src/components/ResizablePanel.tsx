@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect, type ReactNode } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface ResizablePanelProps {
   side: 'left' | 'right';
@@ -67,28 +68,31 @@ export default function ResizablePanel({
 
   if (collapsed) {
     return (
-      <div
-        className="flex flex-col items-center bg-surface-0 border-border py-3 gap-3"
+      <button
+        onClick={() => setCollapsed(false)}
+        className="flex flex-col items-center bg-surface-0 border-border py-3 gap-3 cursor-pointer hover:bg-surface-1 transition-colors"
         style={{
           width: 40,
           [side === 'left' ? 'borderRight' : 'borderLeft']: '1px solid var(--color-border)',
         }}
+        aria-label={`Expand ${title} panel`}
+        title={`Expand ${title}`}
       >
-        <button
-          onClick={() => setCollapsed(false)}
-          className="text-text-dim hover:text-accent transition-colors p-1.5 rounded-sm hover:bg-surface-2"
-          aria-label={`Expand ${title} panel`}
-          title={`Expand ${title}`}
-        >
+        <span className="text-text-dim">
           {icon}
-        </button>
+        </span>
+        {side === 'left' ? (
+          <ChevronRight size={14} className="text-text-dim" />
+        ) : (
+          <ChevronLeft size={14} className="text-text-dim" />
+        )}
         <div
           className="label-caps writing-mode-vertical"
           style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
         >
           {title}
         </div>
-      </div>
+      </button>
     );
   }
 
@@ -113,13 +117,11 @@ export default function ResizablePanel({
           aria-label={`Collapse ${title} panel`}
           title="Collapse"
         >
-          <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-            {side === 'left' ? (
-              <path d="M10 3l-5 5 5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            ) : (
-              <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            )}
-          </svg>
+          {side === 'left' ? (
+            <ChevronLeft size={14} />
+          ) : (
+            <ChevronRight size={14} />
+          )}
         </button>
       </div>
 

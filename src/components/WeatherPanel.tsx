@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useStore } from '../store';
 import { toBeaufort, computePassageRisk, windDirToCompass, RISK_CONFIG } from '../utils/weather';
+import { Wind, Waves, Thermometer, Eye, Navigation } from 'lucide-react';
 import type { WeatherCurrent, WeatherForecastDay } from '../types';
 
 const KMH_TO_KN = 1 / 1.852;
@@ -88,65 +89,80 @@ export default function WeatherPanel() {
   const risk = RISK_CONFIG[current.passageRisk];
 
   return (
-    <div className="p-2.5 space-y-2">
+    <div className="p-3 space-y-3">
       {/* Header */}
       <div className="flex items-center justify-between">
         <span className="label-caps">Strait Conditions</span>
-        <span className="text-[9px] text-status-nominal font-data uppercase tracking-wider">LIVE</span>
+        <span className="text-[10px] text-status-nominal font-data uppercase tracking-wider">LIVE</span>
       </div>
 
       {/* Current conditions grid */}
       <div className="grid grid-cols-2 gap-1.5">
         {/* Wind */}
-        <div className="bg-surface-1 rounded-sm p-1.5">
-          <div className="label-caps mb-0.5">Wind</div>
-          <div className="flex items-center gap-1.5">
-            <WindArrow degrees={current.windDir} />
-            <span className="text-[12px] font-data font-bold text-text-primary">{current.windSpeed}kn</span>
-            <span className="text-[10px] font-data text-text-dim">G{current.windGusts}</span>
+        <div className="bg-surface-1 rounded-sm p-2.5">
+          <div className="flex items-center gap-1.5 mb-1">
+            <Wind size={12} className="text-accent" />
+            <span className="label-caps">Wind</span>
           </div>
-          <div className="text-[9px] text-text-dim font-data mt-0.5">{windDirToCompass(current.windDir)}</div>
+          <div className="flex items-center gap-1.5">
+            <Navigation size={14} className="text-text-dim" style={{ transform: `rotate(${current.windDir}deg)` }} />
+            <span className="text-sm font-data font-bold text-text-primary">{current.windSpeed}kn</span>
+            <span className="text-[11px] font-data text-text-dim">G{current.windGusts}</span>
+          </div>
+          <div className="text-[10px] text-text-dim font-data mt-0.5">{windDirToCompass(current.windDir)}</div>
         </div>
 
         {/* Beaufort */}
-        <div className="bg-surface-1 rounded-sm p-1.5">
-          <div className="label-caps mb-0.5">Beaufort</div>
+        <div className="bg-surface-1 rounded-sm p-2.5">
+          <div className="flex items-center gap-1.5 mb-1">
+            <Wind size={12} className="text-accent" />
+            <span className="label-caps">Beaufort</span>
+          </div>
           <div className="flex items-baseline gap-1">
-            <span className={`text-[12px] font-data font-bold ${current.beaufort >= 7 ? 'text-status-crit' : current.beaufort >= 5 ? 'text-status-warn' : 'text-status-nominal'}`}>
-              BF {current.beaufort}
+            <span className={`text-2xl font-data font-bold ${current.beaufort >= 7 ? 'text-status-crit' : current.beaufort >= 5 ? 'text-status-warn' : 'text-status-nominal'}`}>
+              {current.beaufort}
             </span>
           </div>
-          <div className="text-[9px] text-text-dim mt-0.5">{current.beaufortLabel}</div>
+          <div className="text-[10px] text-text-dim mt-0.5">{current.beaufortLabel}</div>
         </div>
 
         {/* Waves */}
-        <div className="bg-surface-1 rounded-sm p-1.5">
-          <div className="label-caps mb-0.5">Waves</div>
-          <span className={`text-[12px] font-data font-bold ${current.waveHeight >= 2.5 ? 'text-status-crit' : current.waveHeight >= 1.5 ? 'text-status-warn' : 'text-status-nominal'}`}>
+        <div className="bg-surface-1 rounded-sm p-2.5">
+          <div className="flex items-center gap-1.5 mb-1">
+            <Waves size={12} className="text-accent" />
+            <span className="label-caps">Waves</span>
+          </div>
+          <span className={`text-sm font-data font-bold ${current.waveHeight >= 2.5 ? 'text-status-crit' : current.waveHeight >= 1.5 ? 'text-status-warn' : 'text-status-nominal'}`}>
             {current.waveHeight}m
           </span>
         </div>
 
         {/* Temp + Visibility */}
-        <div className="bg-surface-1 rounded-sm p-1.5">
-          <div className="label-caps mb-0.5">Conditions</div>
-          <div className="text-[12px] font-data font-bold text-text-primary">{current.temp}°C</div>
-          <div className="text-[9px] text-text-dim font-data mt-0.5">Vis {current.visibility}km</div>
+        <div className="bg-surface-1 rounded-sm p-2.5">
+          <div className="flex items-center gap-1.5 mb-1">
+            <Thermometer size={12} className="text-accent" />
+            <span className="label-caps">Conditions</span>
+          </div>
+          <div className="text-sm font-data font-bold text-text-primary">{current.temp}°C</div>
+          <div className="flex items-center gap-1 text-[10px] text-text-dim font-data mt-0.5">
+            <Eye size={10} className="text-text-dim" />
+            Vis {current.visibility}km
+          </div>
         </div>
       </div>
 
       {/* Passage Risk */}
       <div
-        className="rounded-sm p-2 border"
+        className="rounded-sm p-2.5 border"
         style={{ backgroundColor: `${risk.color}08`, borderColor: `${risk.color}30` }}
       >
         <div className="flex items-center gap-2">
           <div className={`led ${risk.ledClass}`} />
-          <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: risk.color }}>
+          <span className="text-xs font-bold uppercase tracking-widest" style={{ color: risk.color }}>
             {risk.label} RISK
           </span>
         </div>
-        <div className="text-[10px] text-text-dim mt-1">
+        <div className="text-[11px] text-text-dim mt-1">
           {getRiskRationale(current)}
         </div>
       </div>
@@ -164,15 +180,15 @@ export default function WeatherPanel() {
                   className="flex-1 bg-surface-1 rounded-sm p-1.5 text-center"
                   title={`${day.label}: Wind ${day.windSpeedMax}kn G${day.windGustsMax}, Waves ${day.waveHeightMax}m, ${day.tempMin}-${day.tempMax}°C`}
                 >
-                  <div className="text-[9px] text-text-dim font-semibold uppercase">{day.label}</div>
+                  <div className="text-[10px] text-text-dim font-semibold uppercase">{day.label}</div>
                   <div className="flex justify-center my-1">
                     <div
                       className="w-2 h-2 rounded-full"
                       style={{ backgroundColor: dayRisk.color, boxShadow: `0 0 4px ${dayRisk.color}` }}
                     />
                   </div>
-                  <div className="text-[10px] font-data text-text-primary">{day.windSpeedMax}kn</div>
-                  <div className={`text-[9px] font-data ${day.waveHeightMax >= 2.5 ? 'text-status-crit' : day.waveHeightMax >= 1.5 ? 'text-status-warn' : 'text-text-dim'}`}>
+                  <div className="text-[11px] font-data text-text-primary">{day.windSpeedMax}kn</div>
+                  <div className={`text-[10px] font-data ${day.waveHeightMax >= 2.5 ? 'text-status-crit' : day.waveHeightMax >= 1.5 ? 'text-status-warn' : 'text-text-dim'}`}>
                     {day.waveHeightMax}m
                   </div>
                 </div>
@@ -194,18 +210,4 @@ function getRiskRationale(current: WeatherCurrent): string {
 
   if (factors.length === 0) return 'Favorable conditions for passage';
   return factors.join(' with ');
-}
-
-function WindArrow({ degrees }: { degrees: number }) {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 12 12"
-      style={{ transform: `rotate(${degrees}deg)` }}
-      aria-hidden="true"
-    >
-      <path d="M6 1L3 9h6L6 1z" fill="#7a8ba3" />
-    </svg>
-  );
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useStore } from '../store';
+import { Newspaper } from 'lucide-react';
 import type { NewsItem } from '../types';
 
 const RSS_FEEDS = [
@@ -69,8 +70,9 @@ export default function NewsTicker() {
       role="marquee"
       aria-label="Maritime news headlines"
     >
-      <div className="flex-shrink-0 bg-status-crit text-white text-[10px] font-bold uppercase tracking-widest px-3 h-full flex items-center z-10">
-        NEWS
+      <div className="flex-shrink-0 bg-status-crit text-white text-[11px] font-bold uppercase tracking-widest px-3 h-full flex items-center gap-1.5 z-10">
+        <Newspaper size={12} />
+        LIVE FEED
       </div>
       <div className="overflow-hidden flex-1 relative">
         <div className="animate-ticker flex whitespace-nowrap hover:[animation-play-state:paused]">
@@ -80,9 +82,9 @@ export default function NewsTicker() {
               href={item.link}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-6 text-[11px] text-text-secondary hover:text-accent transition-colors focus:outline-none focus:text-accent uppercase tracking-wide"
+              className="inline-flex items-center gap-2 px-6 text-xs text-text-secondary hover:text-accent transition-colors focus:outline-none focus:text-accent uppercase tracking-wide"
             >
-              <span className="text-[10px] text-text-dim font-data tracking-wider">{item.source}</span>
+              <span className="text-[11px] text-text-dim font-data tracking-wider">{item.source}</span>
               <span>{item.title}</span>
               <span className="text-border" aria-hidden="true">|</span>
             </a>

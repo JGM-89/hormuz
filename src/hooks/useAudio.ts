@@ -1,108 +1,346 @@
 import { useRef, useCallback, useEffect, useState } from 'react';
 
-// Marine VHF radio streams from Broadcastify (public feeds)
-const MARINE_STREAMS = [
-  'https://broadcastify.cdnstream1.com/17329', // NJ/NY marine VHF
-  'https://broadcastify.cdnstream1.com/35475', // VHF CH 16, 67, 61
-];
-
 interface AudioState {
   enabled: boolean;
-  ambientEnabled: boolean;
-  uiSoundsEnabled: boolean;
   volume: number;
+  oceanEnabled: boolean;
+  sonarEnabled: boolean;
+  radioEnabled: boolean;
+  uiSoundsEnabled: boolean;
 }
 
-export function useAudio() {
-  const [state, setState] = useState<AudioState>(() => {
-    const stored = localStorage.getItem('hormuz-audio');
-    if (stored) {
-      try { return JSON.parse(stored); } catch { /* ignore */ }
-    }
-    return { enabled: false, ambientEnabled: true, uiSoundsEnabled: true, volume: 0.3 };
-  });
+const DEFAULT_STATE: AudioState = {
+  enabled: false,
+  volume: 0.3,
+  oceanEnabled: true,
+  sonarEnabled: true,
+  radioEnabled: true,
+  uiSoundsEnabled: true,
+};
 
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const gainRef = useRef<GainNode | null>(null);
+function loadState(): AudioState {
+  const stored = localStorage.getItem('hormuz-audio');
+  if (!stored) return DEFAULT_STATE;
+  try {
+    const parsed = JSON.parse(stored);
+    if ('ambientEnabled' in parsed && !('oceanEnabled' in parsed)) {
+      const ambient = parsed.ambientEnabled;
+      return {
+        enabled: parsed.enabled ?? false,
+        volume: parsed.volume ?? 0.3,
+        oceanEnabled: ambient,
+        sonarEnabled: ambient,
+        radioEnabled: ambient,
+        uiSoundsEnabled: parsed.uiSoundsEnabled ?? true,
+      };
+    }
+    return { ...DEFAULT_STATE, ...parsed };
+  } catch {
+    return DEFAULT_STATE;
+  }
+}
+
+// ── Procedural sound generators ──
+
+interface AmbientLayer {
+  stop: () => void;
+  setVolume?: (v: number) => void;
+}
+
+/** Create a looping noise buffer with pink-ish spectrum (more bass) */
+function createPinkNoiseBuffer(ctx: AudioContext, durationSec: number): AudioBuffer {
+  const sr = ctx.sampleRate;
+  const len = sr * durationSec;
+  const buf = ctx.createBuffer(1, len, sr);
+  const data = buf.getChannelData(0);
+
+  // Voss-McCartney pink noise approximation (7 octaves)
+  let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+  for (let i = 0; i < len; i++) {
+    const white = Math.random() * 2 - 1;
+    b0 = 0.99886 * b0 + white * 0.0555179;
+    b1 = 0.99332 * b1 + white * 0.0750759;
+    b2 = 0.96900 * b2 + white * 0.1538520;
+    b3 = 0.86650 * b3 + white * 0.3104856;
+    b4 = 0.55000 * b4 + white * 0.5329522;
+    b5 = -0.7616 * b5 - white * 0.0168980;
+    data[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
+    b6 = white * 0.115926;
+  }
+  return buf;
+}
+
+
+/**
+ * Ocean ambience — two layers:
+ * 1. Pink noise bed (lowpass filtered) — warm deep ocean feel
+ * 2. VHF static hiss (bandpass white noise) — always-on radio atmosphere
+ */
+function createOceanLayer(ctx: AudioContext, masterGain: GainNode): AmbientLayer {
+  const sources: AudioBufferSourceNode[] = [];
+
+  // Layer 1: Pink noise ocean bed
+  const bed = ctx.createBufferSource();
+  bed.buffer = createPinkNoiseBuffer(ctx, 4);
+  bed.loop = true;
+
+  const lp = ctx.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.value = 250;
+  lp.Q.value = 0.3;
+
+  const hp = ctx.createBiquadFilter();
+  hp.type = 'highpass';
+  hp.frequency.value = 30;
+  hp.Q.value = 0.3;
+
+  const oceanGain = ctx.createGain();
+  oceanGain.gain.value = 0.15;
+
+  bed.connect(hp);
+  hp.connect(lp);
+  lp.connect(oceanGain);
+  oceanGain.connect(masterGain);
+  bed.start();
+  sources.push(bed);
+
+  // Layer 2: VHF static hiss — constant radio atmosphere
+  const staticNoise = ctx.createBufferSource();
+  staticNoise.buffer = createWhiteNoiseBuffer(ctx, 3);
+  staticNoise.loop = true;
+
+  const staticBp = ctx.createBiquadFilter();
+  staticBp.type = 'bandpass';
+  staticBp.frequency.value = 2000;
+  staticBp.Q.value = 0.5;
+
+  const staticGain = ctx.createGain();
+  staticGain.gain.value = 0.018; // very quiet background hiss
+
+  staticNoise.connect(staticBp);
+  staticBp.connect(staticGain);
+  staticGain.connect(masterGain);
+  staticNoise.start();
+  sources.push(staticNoise);
+
+  return {
+    stop: () => {
+      for (const s of sources) {
+        try { s.stop(); } catch { /* already stopped */ }
+      }
+    },
+  };
+}
+
+/** Sonar ping — periodic sine tone with exponential decay and slight reverb tail */
+function createSonarLayer(ctx: AudioContext, masterGain: GainNode): AmbientLayer {
+  let intervalId: ReturnType<typeof setInterval> | null = null;
+  let stopped = false;
+
+  const ping = () => {
+    if (stopped) return;
+    try {
+      const t = ctx.currentTime;
+
+      // Main ping tone
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = 1200;
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.001, t);
+      gain.gain.exponentialRampToValueAtTime(0.07, t + 0.008);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 1.4);
+
+      osc.connect(gain);
+      gain.connect(masterGain);
+
+      osc.start(t);
+      osc.stop(t + 1.5);
+      osc.onended = () => { osc.disconnect(); gain.disconnect(); };
+    } catch { /* ctx closed */ }
+  };
+
+  const firstTimeout = setTimeout(ping, 2500);
+  intervalId = setInterval(ping, 7000 + Math.random() * 5000);
+
+  return {
+    stop: () => {
+      stopped = true;
+      clearTimeout(firstTimeout);
+      if (intervalId) clearInterval(intervalId);
+    },
+  };
+}
+
+/** Create a looping white noise buffer */
+function createWhiteNoiseBuffer(ctx: AudioContext, durationSec: number): AudioBuffer {
+  const sr = ctx.sampleRate;
+  const len = sr * durationSec;
+  const buf = ctx.createBuffer(1, len, sr);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) {
+    data[i] = Math.random() * 2 - 1;
+  }
+  return buf;
+}
+
+// Live marine VHF radio streams — real human radio chatter
+// Uses plain HTML5 Audio (no Web Audio API routing) to avoid CORS restrictions.
+// Volume is controlled directly via audio.volume instead of through the gain chain.
+const MARINE_STREAMS = [
+  'https://broadcastify.cdnstream1.com/34098', // Katwijk — ships approaching Rotterdam
+  'https://broadcastify.cdnstream1.com/20660', // Eems/Dollard — Netherlands Coastguard
+  'https://broadcastify.cdnstream1.com/12874', // Terheijde — Dutch marine VHF
+  'https://broadcastify.cdnstream1.com/35475', // VHF CH 16, 67, 61 (fallback)
+  'https://broadcastify.cdnstream1.com/44773', // Marine SAR CH 16, 65A, 82A
+  'https://broadcastify.cdnstream1.com/17329', // NJ/NY marine (last resort)
+];
+
+/** Marine radio — live Broadcastify VHF stream via plain HTML5 Audio (no CORS issues) */
+function createRadioLayer(_ctx: AudioContext, _masterGain: GainNode, volume: number): AmbientLayer {
+  const audio = new Audio();
+  let stopped = false;
+  let streamIndex = 0;
+
+  const setVol = (v: number) => {
+    audio.volume = Math.max(0, Math.min(1, v * 0.8));
+  };
+  setVol(volume);
+
+  const tryStream = () => {
+    if (stopped || streamIndex >= MARINE_STREAMS.length) return;
+    audio.src = MARINE_STREAMS[streamIndex];
+    audio.play().catch(() => {
+      streamIndex++;
+      setTimeout(tryStream, 500);
+    });
+  };
+
+  audio.onerror = () => {
+    if (stopped) return;
+    streamIndex++;
+    setTimeout(tryStream, 500);
+  };
+
+  let stallTimer: ReturnType<typeof setTimeout> | null = null;
+  audio.onplaying = () => {
+    if (stallTimer) clearTimeout(stallTimer);
+  };
+  audio.onwaiting = () => {
+    if (stopped) return;
+    stallTimer = setTimeout(() => {
+      if (!stopped) { streamIndex++; tryStream(); }
+    }, 10000);
+  };
+
+  tryStream();
+
+  return {
+    stop: () => {
+      stopped = true;
+      audio.pause();
+      audio.src = '';
+      if (stallTimer) clearTimeout(stallTimer);
+    },
+    setVolume: setVol,
+  };
+}
+
+// ── Hook ──
+
+export function useAudio() {
+  const [state, setState] = useState<AudioState>(loadState);
+
+  const ctxRef = useRef<AudioContext | null>(null);
+  const masterGainRef = useRef<GainNode | null>(null);
+  const layersRef = useRef<{
+    ocean: AmbientLayer | null;
+    sonar: AmbientLayer | null;
+    radio: AmbientLayer | null;
+  }>({ ocean: null, sonar: null, radio: null });
 
   // Persist state
   useEffect(() => {
     localStorage.setItem('hormuz-audio', JSON.stringify(state));
   }, [state]);
 
-  // Manage ambient audio stream
+  // Ensure AudioContext exists when enabled
+  const ensureContext = useCallback(() => {
+    if (!ctxRef.current || ctxRef.current.state === 'closed') {
+      const ctx = new AudioContext();
+      const master = ctx.createGain();
+      master.gain.value = state.volume;
+      master.connect(ctx.destination);
+      ctxRef.current = ctx;
+      masterGainRef.current = master;
+    }
+    if (ctxRef.current.state === 'suspended') {
+      ctxRef.current.resume();
+    }
+    return ctxRef.current;
+  }, [state.volume]);
+
+  // Tear down everything
+  const teardownAll = useCallback(() => {
+    const layers = layersRef.current;
+    if (layers.ocean) { layers.ocean.stop(); layers.ocean = null; }
+    if (layers.sonar) { layers.sonar.stop(); layers.sonar = null; }
+    if (layers.radio) { layers.radio.stop(); layers.radio = null; }
+    if (ctxRef.current && ctxRef.current.state !== 'closed') {
+      ctxRef.current.close().catch(() => {});
+    }
+    ctxRef.current = null;
+    masterGainRef.current = null;
+  }, []);
+
+  // Manage ambient layers based on state
   useEffect(() => {
-    if (state.enabled && state.ambientEnabled) {
-      if (!audioRef.current) {
-        const audio = new Audio();
-        audio.crossOrigin = 'anonymous';
-        audio.loop = true;
+    if (!state.enabled) {
+      teardownAll();
+      return;
+    }
 
-        // Try each stream, fall back to next
-        let streamIndex = 0;
-        const tryStream = () => {
-          if (streamIndex < MARINE_STREAMS.length) {
-            audio.src = MARINE_STREAMS[streamIndex];
-            audio.play().catch(() => {
-              streamIndex++;
-              tryStream();
-            });
-          }
-        };
+    const ctx = ensureContext();
+    const master = masterGainRef.current!;
+    const layers = layersRef.current;
 
-        audio.onerror = () => {
-          streamIndex++;
-          tryStream();
-        };
+    // Ocean
+    if (state.oceanEnabled && !layers.ocean) {
+      layers.ocean = createOceanLayer(ctx, master);
+    } else if (!state.oceanEnabled && layers.ocean) {
+      layers.ocean.stop();
+      layers.ocean = null;
+    }
 
-        // Set up Web Audio API for volume control
-        try {
-          const ctx = new AudioContext();
-          const source = ctx.createMediaElementSource(audio);
-          const gain = ctx.createGain();
-          gain.gain.value = state.volume;
-          source.connect(gain);
-          gain.connect(ctx.destination);
-          audioCtxRef.current = ctx;
-          gainRef.current = gain;
-        } catch {
-          // Fallback: just use audio volume
-          audio.volume = state.volume;
-        }
+    // Sonar
+    if (state.sonarEnabled && !layers.sonar) {
+      layers.sonar = createSonarLayer(ctx, master);
+    } else if (!state.sonarEnabled && layers.sonar) {
+      layers.sonar.stop();
+      layers.sonar = null;
+    }
 
-        audioRef.current = audio;
-        tryStream();
-      }
-    } else {
-      // Stop ambient
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.src = '';
-        audioRef.current = null;
-      }
-      if (audioCtxRef.current) {
-        audioCtxRef.current.close().catch(() => {});
-        audioCtxRef.current = null;
-        gainRef.current = null;
-      }
+    // Radio
+    if (state.radioEnabled && !layers.radio) {
+      layers.radio = createRadioLayer(ctx, master, state.volume);
+    } else if (!state.radioEnabled && layers.radio) {
+      layers.radio.stop();
+      layers.radio = null;
     }
 
     return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.src = '';
-        audioRef.current = null;
-      }
+      teardownAll();
     };
-  }, [state.enabled, state.ambientEnabled]);
+  }, [state.enabled, state.oceanEnabled, state.sonarEnabled, state.radioEnabled]);
 
-  // Update volume
+  // Update master volume (and radio which uses its own volume control)
   useEffect(() => {
-    if (gainRef.current) {
-      gainRef.current.gain.value = state.volume;
-    } else if (audioRef.current) {
-      audioRef.current.volume = state.volume;
+    if (masterGainRef.current) {
+      masterGainRef.current.gain.setValueAtTime(state.volume, ctxRef.current?.currentTime ?? 0);
+    }
+    if (layersRef.current.radio?.setVolume) {
+      layersRef.current.radio.setVolume(state.volume);
     }
   }, [state.volume]);
 
@@ -157,8 +395,16 @@ export function useAudio() {
     setState(s => ({ ...s, volume: Math.max(0, Math.min(1, volume)) }));
   }, []);
 
-  const toggleAmbient = useCallback(() => {
-    setState(s => ({ ...s, ambientEnabled: !s.ambientEnabled }));
+  const toggleOcean = useCallback(() => {
+    setState(s => ({ ...s, oceanEnabled: !s.oceanEnabled }));
+  }, []);
+
+  const toggleSonar = useCallback(() => {
+    setState(s => ({ ...s, sonarEnabled: !s.sonarEnabled }));
+  }, []);
+
+  const toggleRadio = useCallback(() => {
+    setState(s => ({ ...s, radioEnabled: !s.radioEnabled }));
   }, []);
 
   const toggleUiSounds = useCallback(() => {
@@ -169,7 +415,9 @@ export function useAudio() {
     ...state,
     toggle,
     setVolume,
-    toggleAmbient,
+    toggleOcean,
+    toggleSonar,
+    toggleRadio,
     toggleUiSounds,
     playSound,
   };

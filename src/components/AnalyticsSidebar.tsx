@@ -4,6 +4,7 @@ import {
   PieChart, Pie, Cell, AreaChart, Area,
 } from 'recharts';
 import { useStore } from '../store';
+import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 
 const COLORS = ['#00b4d8', '#ffab00', '#00e676', '#7c4dff', '#ff6e40', '#448aff'];
 const tooltipStyle = {
@@ -111,7 +112,7 @@ export default function AnalyticsSidebar({ onExpandClick }: { onExpandClick: () 
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-2 space-y-2">
+      <div className="flex-1 overflow-y-auto p-3 space-y-3">
         {section === 'charts' ? (
           <>
             {/* Trend cards */}
@@ -164,7 +165,13 @@ export default function AnalyticsSidebar({ onExpandClick }: { onExpandClick: () 
                   <XAxis dataKey="hour" tick={axisProps} axisLine={false} tickLine={false} interval={5} />
                   <YAxis tick={axisProps} axisLine={false} tickLine={false} allowDecimals={false} />
                   <Tooltip contentStyle={tooltipStyle} />
-                  <Area type="monotone" dataKey="count" stroke="#ffab00" fill="#ffab00" fillOpacity={0.1} strokeWidth={1.5} />
+                  <defs>
+                    <linearGradient id="transitGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#ffab00" stopOpacity={0.3} />
+                      <stop offset="100%" stopColor="#ffab00" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <Area type="monotone" dataKey="count" stroke="#ffab00" fill="url(#transitGrad)" strokeWidth={1.5} />
                 </AreaChart>
               </ResponsiveContainer>
             </MiniCard>
@@ -211,7 +218,7 @@ function TabBtn({ active, onClick, children }: { active: boolean; onClick: () =>
 
 function MiniCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-surface-1 rounded-sm border border-border-dim p-2">
+    <div className="bg-surface-1 rounded-sm border border-border-dim p-3">
       <h4 className="label-caps mb-1.5">{title}</h4>
       {children}
     </div>
@@ -223,12 +230,13 @@ function TrendCard({ label, current, avg, unit }: { label: string; current: numb
   const isUp = diff > 5;
   const isDown = diff < -5;
   return (
-    <div className="bg-surface-1 rounded-sm border border-border-dim p-2">
+    <div className="bg-surface-1 rounded-sm border border-border-dim p-3">
       <div className="label-caps mb-0.5">{label}</div>
-      <div className="flex items-baseline gap-1">
+      <div className="flex items-baseline gap-1.5">
         <span className="text-sm font-bold text-white font-data">{current}{unit ? ` ${unit}` : ''}</span>
-        <span className={`text-[10px] font-data ${isUp ? 'text-status-nominal' : isDown ? 'text-status-crit' : 'text-text-dim'}`}>
-          {isUp ? '\u25B2' : isDown ? '\u25BC' : '\u25CF'}{Math.abs(Math.round(diff))}%
+        <span className={`flex items-center gap-0.5 text-[11px] font-data ${isUp ? 'text-status-nominal' : isDown ? 'text-status-crit' : 'text-text-dim'}`}>
+          {isUp ? <TrendingUp size={11} /> : isDown ? <TrendingDown size={11} /> : <Minus size={11} />}
+          {Math.abs(Math.round(diff))}%
         </span>
       </div>
       <div className="text-[10px] text-text-dim font-data">avg {avg}{unit ? ` ${unit}` : ''}</div>

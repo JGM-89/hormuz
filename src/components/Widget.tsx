@@ -38,7 +38,7 @@ export default function Widget({
   ...rest
 }: WidgetProps) {
   const base = 'bg-surface-0 border border-border';
-  const shape = variant === 'pill' ? 'rounded-sm px-3 py-1.5' : 'rounded-sm p-2';
+  const shape = variant === 'pill' ? 'rounded-sm px-3 py-1.5' : 'rounded-sm p-3';
   const topBorder = SEVERITY_BORDER[severity] ?? SEVERITY_BORDER.info;
 
   return (
