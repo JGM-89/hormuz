@@ -32,6 +32,7 @@ function loadState(): AudioState {
     if ('ambientEnabled' in parsed && !('oceanEnabled' in parsed)) {
       const ambient = parsed.ambientEnabled;
       return {
+        ...DEFAULT_STATE,
         enabled: parsed.enabled ?? false,
         volume: parsed.volume ?? 0.3,
         oceanEnabled: ambient,
