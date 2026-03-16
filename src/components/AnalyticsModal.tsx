@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, AreaChart, Area, LineChart, Line, Legend,
@@ -288,6 +288,7 @@ export default function AnalyticsModal({ open, onClose }: { open: boolean; onClo
     [storeCommodities],
   );
   const weather = useStore((s) => s.weather);
+  const [expandedCommodity, setExpandedCommodity] = useState<string | null>(null);
 
   // ── Data computations (preserved from original) ──
 
@@ -804,30 +805,74 @@ export default function AnalyticsModal({ open, onClose }: { open: boolean; onClo
                       </tr>
                     </thead>
                     <tbody>
-                      {sortedCommodities.map((c) => (
-                        <tr key={c.symbol} className="border-b border-border/50 hover:bg-surface-2/50">
-                          <td className="p-2">
-                            <div className="text-text-primary font-medium">{c.shortName}</div>
-                            <div className="text-[10px] text-text-dim">{c.unit}</div>
-                          </td>
-                          <td className="p-2 text-right font-data text-text-primary">
-                            {formatCommodityPrice(c.price, c.symbol)}
-                          </td>
-                          <td className={`p-2 text-right font-data font-semibold ${
-                            c.changePercent > 0 ? 'text-status-nominal' : c.changePercent < 0 ? 'text-status-crit' : 'text-text-dim'
-                          }`}>
-                            {c.changePercent > 0 ? '+' : ''}{c.changePercent.toFixed(2)}%
-                          </td>
-                          <td className="p-2 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              <div className="w-12 h-1.5 bg-surface-2 rounded-full overflow-hidden">
-                                <div className="h-full rounded-full" style={{ width: `${c.hormuzSensitivity * 100}%`, backgroundColor: c.hormuzSensitivity >= 0.8 ? '#ff1744' : c.hormuzSensitivity >= 0.5 ? '#ffab00' : '#4a5e78' }} />
-                              </div>
-                              <span className="text-text-dim font-data">{Math.round(c.hormuzSensitivity * 100)}%</span>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
+                      {sortedCommodities.map((c) => {
+                        const isUp = c.changePercent >= 0;
+                        const isExpanded = expandedCommodity === c.symbol;
+                        const sparkColor = isUp ? '#00e676' : '#ff1744';
+                        return (
+                          <tr key={c.symbol} className="border-b border-border/50 group">
+                            <td colSpan={4} className="p-0">
+                              <button
+                                onClick={() => setExpandedCommodity(isExpanded ? null : c.symbol)}
+                                className="w-full grid grid-cols-[1fr_auto_auto_auto] items-center p-2 hover:bg-surface-2/50 text-left"
+                              >
+                                <div>
+                                  <div className="text-xs text-text-primary font-medium">{c.shortName}</div>
+                                  <div className="text-[10px] text-text-dim">{c.unit}</div>
+                                </div>
+                                <div className="text-xs text-right font-data text-text-primary px-2">
+                                  {formatCommodityPrice(c.price, c.symbol)}
+                                </div>
+                                <div className={`text-xs text-right font-data font-semibold px-2 ${
+                                  c.changePercent > 0 ? 'text-status-nominal' : c.changePercent < 0 ? 'text-status-crit' : 'text-text-dim'
+                                }`}>
+                                  {c.changePercent > 0 ? '+' : ''}{c.changePercent.toFixed(2)}%
+                                </div>
+                                <div className="flex items-center justify-end gap-1.5 px-2">
+                                  <div className="w-12 h-1.5 bg-surface-2 rounded-full overflow-hidden">
+                                    <div className="h-full rounded-full" style={{ width: `${c.hormuzSensitivity * 100}%`, backgroundColor: c.hormuzSensitivity >= 0.8 ? '#ff1744' : c.hormuzSensitivity >= 0.5 ? '#ffab00' : '#4a5e78' }} />
+                                  </div>
+                                  <span className="text-[10px] text-text-dim font-data">{Math.round(c.hormuzSensitivity * 100)}%</span>
+                                </div>
+                              </button>
+                              {isExpanded && (
+                                <div className="px-2 pb-2 space-y-2">
+                                  {c.history.length > 2 && (
+                                    <div className="h-20">
+                                      <ResponsiveContainer width="100%" height="100%">
+                                        <AreaChart data={c.history} margin={{ top: 2, right: 2, bottom: 0, left: 2 }}>
+                                          <XAxis dataKey="timestamp" hide />
+                                          <Tooltip
+                                            contentStyle={tooltipStyle}
+                                            formatter={(val: unknown) => [formatCommodityPrice(Number(val), c.symbol), 'Price']}
+                                            labelFormatter={(ts) => new Date(Number(ts)).toLocaleDateString()}
+                                          />
+                                          <Area type="monotone" dataKey="price" stroke={sparkColor} fill={sparkColor} fillOpacity={0.15} strokeWidth={1.5} dot={false} isAnimationActive={false} />
+                                        </AreaChart>
+                                      </ResponsiveContainer>
+                                    </div>
+                                  )}
+                                  <div className="grid grid-cols-4 gap-1 text-center">
+                                    {[
+                                      { label: 'Open', val: c.open24h },
+                                      { label: 'High', val: c.high24h, color: '#00e676' },
+                                      { label: 'Low', val: c.low24h, color: '#ff1744' },
+                                      { label: 'Current', val: c.price, color: sparkColor },
+                                    ].map((o) => (
+                                      <div key={o.label} className="bg-surface-2/50 rounded-sm px-1.5 py-1">
+                                        <div className="text-[9px] text-text-dim uppercase">{o.label}</div>
+                                        <div className="text-[11px] font-data" style={{ color: o.color ?? '#e0e8f0' }}>
+                                          {formatCommodityPrice(o.val, c.symbol)}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

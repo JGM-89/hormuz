@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts';
+import { AreaChart, Area, ResponsiveContainer, Tooltip, XAxis } from 'recharts';
 import { useStore } from '../store';
 import { getSeverity, getSeverityColor, formatCommodityPrice, computeRiskPremium, HORMUZ_SENSITIVITY } from '../utils/commodities';
 import { MOCK_COMMODITIES, generateMockHistory } from '../utils/mockCommodities';
@@ -164,10 +164,11 @@ function CommodityRow({
               <div className="h-16">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={c.history} margin={{ top: 2, right: 2, bottom: 0, left: 2 }}>
+                    <XAxis dataKey="timestamp" hide />
                     <Tooltip
                       contentStyle={tooltipStyle}
                       formatter={(val: unknown) => [formatCommodityPrice(Number(val), c.symbol), 'Price']}
-                      labelFormatter={(ts: unknown) => new Date(Number(ts)).toLocaleDateString()}
+                      labelFormatter={(ts) => new Date(Number(ts)).toLocaleDateString()}
                     />
                     <Area
                       type="monotone"
