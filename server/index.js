@@ -19,7 +19,7 @@ const API_KEY = process.env.AISSTREAM_API_KEY;
 const PORT = process.env.PORT || 3001;
 const BOUNDING_BOX = process.env.BOUNDING_BOX
   ? JSON.parse(process.env.BOUNDING_BOX)
-  : [[54.0, 24.0], [58.5, 27.5]];
+  : [[24.0, 54.0], [27.5, 58.5]]; // [lat, lon] — AISStream format
 const STALE_MINUTES = parseInt(process.env.STALE_MINUTES || '30', 10);
 const MAX_TRAIL_POINTS = parseInt(process.env.MAX_TRAIL_POINTS || '20', 10);
 const PUSH_INTERVAL_MS = parseInt(process.env.PUSH_INTERVAL_MS || '60000', 10);
