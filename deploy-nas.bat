@@ -10,11 +10,13 @@ setlocal enabledelayedexpansion
 :: a docker-compose.yml with all env vars baked in.
 
 set "SCRIPT_DIR=%~dp0"
+:: Strip trailing backslash for Docker compatibility
+if "%SCRIPT_DIR:~-1%"=="\" set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
 set "OUTPUT_DIR=%USERPROFILE%\Documents"
 set "IMAGE_NAME=hormuz-tracker"
 set "TAR_PATH=%OUTPUT_DIR%\hormuz.tar"
 set "COMPOSE_PATH=%OUTPUT_DIR%\hormuz-compose.yml"
-set "ENV_FILE=%SCRIPT_DIR%.env.nas"
+set "ENV_FILE=%SCRIPT_DIR%\.env.nas"
 
 :: ── Check for saved env vars ──
 if not exist "%ENV_FILE%" (
