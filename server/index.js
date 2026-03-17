@@ -291,6 +291,16 @@ function handleAISMessage(msg) {
   const pos = msg.Message?.PositionReport;
   if (!meta || !pos) return;
 
+  // Validate position — reject invalid/missing coordinates
+  const lat = meta.latitude;
+  const lon = meta.longitude;
+  if (lat == null || lon == null || !isFinite(lat) || !isFinite(lon)) return;
+  if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return;
+  // AIS uses 91/181 as "not available" markers
+  if (Math.abs(lat) > 89.9 || Math.abs(lon) > 180) return;
+  // Must be within our area of interest (Gulf region with margin)
+  if (lat < 22 || lat > 30 || lon < 48 || lon > 62) return;
+
   const shipType = meta.ShipType ?? knownShipTypes.get(String(meta.MMSI)) ?? pos.Type ?? 0;
   const name = (meta.ShipName || '').trim();
 
@@ -304,8 +314,8 @@ function handleAISMessage(msg) {
   const vessel = {
     mmsi,
     name: name || `Unknown (${mmsi})`,
-    lat: meta.latitude,
-    lon: meta.longitude,
+    lat,
+    lon,
     speed: pos.Sog ?? 0,
     course: pos.Cog ?? 0,
     heading: pos.TrueHeading ?? pos.Cog ?? 0,

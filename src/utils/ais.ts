@@ -90,10 +90,11 @@ export function getNavStatusLabel(status: number): string {
 }
 
 export function getSpeedColor(speed: number): string {
-  if (speed <= 0.5) return '#64748b'; // slate — anchored
-  if (speed <= 8) return '#22d3ee';   // cyan — slow
-  if (speed <= 14) return '#10b981';  // green — normal
-  return '#f59e0b';                    // amber — fast
+  if (speed <= 0.5) return '#64748b'; // slate — anchored/stationary
+  if (speed <= 8) return '#22d3ee';   // cyan — slow (maneuvering, port approach)
+  if (speed <= 18) return '#10b981';  // green — normal transit (12-18 kn typical)
+  if (speed <= 25) return '#f59e0b';  // amber — fast
+  return '#ef4444';                    // red — anomalous
 }
 
 export function formatSpeed(speed: number): string {
@@ -104,6 +105,17 @@ import type { RawVessel, Vessel } from '../types';
 
 /** Cap AIS speed at 50 knots — anything above is almost certainly a data error */
 const MAX_REALISTIC_SPEED = 50;
+
+/** Check if coordinates are valid and within the Gulf region */
+export function isValidPosition(lat: number, lon: number): boolean {
+  if (!isFinite(lat) || !isFinite(lon)) return false;
+  if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return false;
+  // AIS "not available" markers
+  if (Math.abs(lat) > 89.9) return false;
+  // Gulf region with generous margin
+  if (lat < 22 || lat > 30 || lon < 48 || lon > 62) return false;
+  return true;
+}
 
 export function enrichVessel(raw: RawVessel): Vessel {
   const speed = raw.speed > MAX_REALISTIC_SPEED ? 0 : raw.speed;

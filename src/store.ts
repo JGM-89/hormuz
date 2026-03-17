@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { Vessel, RawVessel, Transit, Stats, WSMessage, HistoricalData, NewsItem, OilPrice, CommodityData, WeatherState, Aircraft } from './types';
-import { enrichVessel } from './utils/ais';
+import { enrichVessel, isValidPosition } from './utils/ais';
 
 // Data source config — set via env vars at build time
 const GITHUB_RAW_BASE = import.meta.env.VITE_GITHUB_RAW_BASE; // e.g. "https://raw.githubusercontent.com/user/hormuz/data"
@@ -77,7 +77,10 @@ function computeStats(vessels: Map<string, Vessel>, serverStats?: Partial<Stats>
 function enrichVesselMap(raw: Record<string, RawVessel>): Map<string, Vessel> {
   const map = new Map<string, Vessel>();
   for (const [mmsi, v] of Object.entries(raw)) {
-    map.set(mmsi, enrichVessel(v as RawVessel));
+    const rv = v as RawVessel;
+    // Skip vessels with invalid/missing positions
+    if (!isValidPosition(rv.lat, rv.lon)) continue;
+    map.set(mmsi, enrichVessel(rv));
   }
   return map;
 }
@@ -134,6 +137,8 @@ export const useStore = create<AppState>((set) => ({
         break;
       }
       case 'vessel_update': {
+        // Skip vessels with invalid positions
+        if (!isValidPosition(msg.vessel.lat, msg.vessel.lon)) break;
         set((state) => {
           const newVessels = new Map(state.vessels);
           newVessels.set(msg.vessel.mmsi, enrichVessel(msg.vessel));
