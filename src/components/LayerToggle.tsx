@@ -51,12 +51,22 @@ const LAYERS: LayerConfig[] = [
 
 const STORAGE_KEY = 'hormuz-layers';
 
+// Default: everything on except satellite
+const DEFAULT_LAYERS: Record<string, boolean> = {
+  aircraft: true,
+  'shipping-lanes': true,
+  'military-bases': true,
+  satellite: false,
+  eez: true,
+  tss: true,
+};
+
 function loadPersistedState(): Record<string, boolean> {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) return { ...DEFAULT_LAYERS, ...JSON.parse(raw) };
   } catch { /* ignore */ }
-  return {};
+  return { ...DEFAULT_LAYERS };
 }
 
 function persistState(state: Record<string, boolean>) {

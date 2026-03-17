@@ -58,7 +58,7 @@ export default function Map() {
     });
 
     map.on('load', () => {
-      // ─── Satellite raster source (hidden by default, added first so it's below everything) ───
+      // ─── Satellite raster source (hidden by default, inserted below basemap labels) ───
       map.addSource('satellite-tiles', {
         type: 'raster',
         tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
@@ -66,13 +66,19 @@ export default function Map() {
         maxzoom: 19,
         attribution: '&copy; Esri, Maxar, Earthstar Geographics',
       });
+
+      // Find the first label layer in the basemap so satellite goes underneath it
+      const firstLabelLayer = map.getStyle().layers.find(
+        (l: { id: string; type: string }) => l.type === 'symbol' && /label|place|poi/i.test(l.id),
+      );
+
       map.addLayer({
         id: 'satellite',
         type: 'raster',
         source: 'satellite-tiles',
         layout: { visibility: 'none' },
         paint: { 'raster-opacity': 0.85 },
-      });
+      }, firstLabelLayer?.id); // insert below labels so place names stay readable
 
       // ─── TSS lanes ───
       map.addSource('tss-inbound', {
@@ -87,7 +93,7 @@ export default function Map() {
         id: 'tss-inbound',
         type: 'line',
         source: 'tss-inbound',
-        layout: { visibility: 'none' },
+        layout: { visibility: 'visible' },
         paint: {
           'line-color': '#22d3ee',
           'line-width': 2,
@@ -108,7 +114,7 @@ export default function Map() {
         id: 'tss-outbound',
         type: 'line',
         source: 'tss-outbound',
-        layout: { visibility: 'none' },
+        layout: { visibility: 'visible' },
         paint: {
           'line-color': '#f59e0b',
           'line-width': 2,
@@ -130,7 +136,7 @@ export default function Map() {
         id: 'chokepoint-fill',
         type: 'fill',
         source: 'chokepoint',
-        layout: { visibility: 'none' },
+        layout: { visibility: 'visible' },
         paint: {
           'fill-color': '#06b6d4',
           'fill-opacity': 0.05,
@@ -140,7 +146,7 @@ export default function Map() {
         id: 'chokepoint-border',
         type: 'line',
         source: 'chokepoint',
-        layout: { visibility: 'none' },
+        layout: { visibility: 'visible' },
         paint: {
           'line-color': '#06b6d4',
           'line-width': 1,
@@ -149,7 +155,7 @@ export default function Map() {
         },
       });
 
-      // ─── Shipping lanes (hidden by default) ───
+      // ─── Shipping lanes (on by default) ───
       map.addSource('shipping-lanes', {
         type: 'geojson',
         data: SHIPPING_LANES,
@@ -159,7 +165,7 @@ export default function Map() {
         type: 'line',
         source: 'shipping-lanes',
         filter: ['==', ['get', 'type'], 'major'],
-        layout: { visibility: 'none' },
+        layout: { visibility: 'visible' },
         paint: {
           'line-color': '#60a5fa',
           'line-width': 3,
@@ -171,7 +177,7 @@ export default function Map() {
         type: 'line',
         source: 'shipping-lanes',
         filter: ['==', ['get', 'type'], 'secondary'],
-        layout: { visibility: 'none' },
+        layout: { visibility: 'visible' },
         paint: {
           'line-color': '#60a5fa',
           'line-width': 2,
@@ -180,7 +186,7 @@ export default function Map() {
         },
       });
 
-      // ─── EEZ boundaries (hidden by default) ───
+      // ─── EEZ boundaries (on by default) ───
       map.addSource('eez', {
         type: 'geojson',
         data: EEZ_BOUNDARIES,
@@ -189,7 +195,7 @@ export default function Map() {
         id: 'eez-lines',
         type: 'line',
         source: 'eez',
-        layout: { visibility: 'none' },
+        layout: { visibility: 'visible' },
         paint: {
           'line-color': '#c084fc',
           'line-width': 2,
@@ -198,7 +204,7 @@ export default function Map() {
         },
       });
 
-      // ─── Military bases (hidden by default) ───
+      // ─── Military bases (on by default) ───
       map.addSource('military-bases', {
         type: 'geojson',
         data: MILITARY_BASES,
@@ -207,7 +213,7 @@ export default function Map() {
         id: 'military-bases-circles',
         type: 'circle',
         source: 'military-bases',
-        layout: { visibility: 'none' },
+        layout: { visibility: 'visible' },
         paint: {
           'circle-radius': 8,
           'circle-color': [
@@ -231,7 +237,7 @@ export default function Map() {
         type: 'symbol',
         source: 'military-bases',
         layout: {
-          visibility: 'none',
+          visibility: 'visible',
           'text-field': ['get', 'name'],
           'text-size': 10,
           'text-offset': [0, 1.5],
@@ -281,7 +287,7 @@ export default function Map() {
         type: 'symbol',
         source: 'aircraft',
         layout: {
-          visibility: 'none',
+          visibility: 'visible',
           'icon-image': 'plane-icon',
           'icon-size': 0.8,
           'icon-rotate': ['get', 'heading'],
