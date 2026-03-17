@@ -51,7 +51,7 @@ export function generateShippingForecast(
   daily: WeatherForecastDay[],
 ): ShippingForecast {
   const now = new Date();
-  const utcTime = now.toUTCString().replace(/.*(\d{2}:\d{2}).*/, '$1');
+  const utcTime = `${String(now.getUTCHours()).padStart(2, '0')}:${String(now.getUTCMinutes()).padStart(2, '0')}`;
   const compass = windDirToCompass(current.windDir);
   const sea = seaState(current.beaufort);
   const vis = visibilityDesc(current.visibility);
