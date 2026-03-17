@@ -10,6 +10,7 @@ import OutageOverlay from './components/OutageOverlay';
 import NewsTicker from './components/NewsTicker';
 import ResizablePanel from './components/ResizablePanel';
 import VesselList from './components/VesselList';
+import AircraftList from './components/AircraftList';
 import AnalyticsSidebar from './components/AnalyticsSidebar';
 import CommodityPanel from './components/CommodityPanel';
 import WeatherPanel from './components/WeatherPanel';
@@ -34,6 +35,7 @@ const AnalyticsIcon = () => (
 
 export default function App() {
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
+  const [leftTab, setLeftTab] = useState<'vessels' | 'aircraft'>('vessels');
 
   useEffect(() => {
     connectDataSource();
@@ -60,17 +62,45 @@ export default function App() {
 
       {/* ── MAIN 3-COLUMN GRID ── */}
       <div className="flex-1 flex min-h-0">
-        {/* LEFT PANEL: Vessel List */}
+        {/* LEFT PANEL: Vessels / Aircraft */}
         <ResizablePanel
           side="left"
           defaultWidth={320}
           minWidth={240}
           maxWidth={500}
           storageKey="vessels"
-          title="Vessels"
+          title={leftTab === 'vessels' ? 'Vessels' : 'Aircraft'}
           icon={<VesselIcon />}
         >
-          <VesselList />
+          <div className="flex flex-col h-full">
+            {/* Tab switcher */}
+            <div className="flex border-b border-border flex-shrink-0">
+              <button
+                onClick={() => setLeftTab('vessels')}
+                className={`flex-1 text-[11px] py-2 uppercase tracking-wider font-semibold transition-colors ${
+                  leftTab === 'vessels'
+                    ? 'text-accent border-b-2 border-accent bg-accent/5'
+                    : 'text-text-dim hover:text-text-secondary'
+                }`}
+              >
+                Vessels
+              </button>
+              <button
+                onClick={() => setLeftTab('aircraft')}
+                className={`flex-1 text-[11px] py-2 uppercase tracking-wider font-semibold transition-colors ${
+                  leftTab === 'aircraft'
+                    ? 'text-purple-400 border-b-2 border-purple-400 bg-purple-400/5'
+                    : 'text-text-dim hover:text-text-secondary'
+                }`}
+              >
+                Aircraft
+              </button>
+            </div>
+            {/* Tab content */}
+            <div className="flex-1 min-h-0">
+              {leftTab === 'vessels' ? <VesselList /> : <AircraftList />}
+            </div>
+          </div>
         </ResizablePanel>
 
         {/* CENTER: Map with floating overlays */}

@@ -82,36 +82,32 @@ export default function LayerToggle() {
   const aircraftCount = useStore((s) => s.aircraft.size);
   const restoredRef = useRef(false);
 
-  // On mount, restore persisted layer visibility once map is ready
+  // On mount, restore persisted layer visibility once all map layers are added
   useEffect(() => {
     if (restoredRef.current) return;
 
-    const restore = () => {
+    const doRestore = () => {
+      if (restoredRef.current) return;
+      restoredRef.current = true;
+      const persisted = loadPersistedState();
+      for (const layer of LAYERS) {
+        if (persisted[layer.id]) {
+          setLayerVisibility(layer.mapLayers, true);
+        }
+      }
+    };
+
+    const tryListen = () => {
       const map = mapInstanceRef.current;
       if (!map) return false;
-
-      const doRestore = () => {
-        if (restoredRef.current) return;
-        restoredRef.current = true;
-        const persisted = loadPersistedState();
-        for (const layer of LAYERS) {
-          if (persisted[layer.id]) {
-            setLayerVisibility(layer.mapLayers, true);
-          }
-        }
-      };
-
-      if (map.isStyleLoaded()) {
-        doRestore();
-      } else {
-        map.on('load', () => doRestore());
-      }
+      // Listen for 'layers-ready' custom event fired after all overlay layers are added
+      map.on('layers-ready', doRestore);
       return true;
     };
 
-    if (!restore()) {
+    if (!tryListen()) {
       const timer = setInterval(() => {
-        if (restore()) clearInterval(timer);
+        if (tryListen()) clearInterval(timer);
       }, 200);
       return () => clearInterval(timer);
     }

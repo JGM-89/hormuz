@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAudio, MARINE_STREAMS } from '../hooks/useAudio';
-import { Volume2, VolumeX, Waves, Radar, Radio, Zap, Megaphone } from 'lucide-react';
+import { Volume2, VolumeX, Waves, Radio, Zap, Megaphone } from 'lucide-react';
 
 export default function AudioController() {
   const audio = useAudio();
@@ -76,23 +76,33 @@ export default function AudioController() {
             {/* Ambient section header */}
             <div className="label-caps text-text-dim pt-1">Ambient Layers</div>
 
-            {/* Ocean waves */}
+            {/* Ambience (ocean + sonar combined) */}
             <ToggleRow
               icon={<Waves size={13} />}
               label="Ambience"
-              sublabel="Sea state & radio static"
+              sublabel="Sea state, static & sonar"
               enabled={audio.oceanEnabled}
               onToggle={audio.toggleOcean}
             />
 
-            {/* Sonar ping */}
-            <ToggleRow
-              icon={<Radar size={13} />}
-              label="Sonar Ping"
-              sublabel="Periodic naval ping"
-              enabled={audio.sonarEnabled}
-              onToggle={audio.toggleSonar}
-            />
+            {/* Ambience volume slider */}
+            {audio.oceanEnabled && (
+              <div className="pl-7">
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className="text-[10px] text-text-dim">Volume</span>
+                  <span className="text-[10px] font-data text-text-dim">{Math.round(audio.ambienceVolume * 100)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={Math.round(audio.ambienceVolume * 100)}
+                  onChange={(e) => audio.setAmbienceVolume(Number(e.target.value) / 100)}
+                  className="w-full h-1 bg-surface-2 rounded-sm appearance-none cursor-pointer accent-accent"
+                  aria-label="Ambience volume"
+                />
+              </div>
+            )}
 
             {/* Marine radio */}
             <ToggleRow
@@ -102,6 +112,25 @@ export default function AudioController() {
               enabled={audio.radioEnabled}
               onToggle={audio.toggleRadio}
             />
+
+            {/* VHF volume slider */}
+            {audio.radioEnabled && (
+              <div className="pl-7 mb-1">
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className="text-[10px] text-text-dim">Volume</span>
+                  <span className="text-[10px] font-data text-text-dim">{Math.round(audio.radioVolume * 100)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={Math.round(audio.radioVolume * 100)}
+                  onChange={(e) => audio.setRadioVolume(Number(e.target.value) / 100)}
+                  className="w-full h-1 bg-surface-2 rounded-sm appearance-none cursor-pointer accent-accent"
+                  aria-label="VHF radio volume"
+                />
+              </div>
+            )}
 
             {/* Feed selector — only visible when radio is on */}
             {audio.radioEnabled && (

@@ -98,8 +98,8 @@ export default function FloatingStats() {
 function Stat({ value, label, accent, title }: { value: string | number; label: string; accent?: boolean; title?: string }) {
   return (
     <div className="flex items-baseline gap-1" title={title}>
-      <span className={`text-base font-bold font-data ${accent ? 'text-accent' : 'text-white'}`}>{value}</span>
-      <span className="text-[11px] text-text-dim uppercase tracking-widest">{label}</span>
+      <span className="text-base font-bold font-data" style={accent ? { color: '#00b4d8' } : { color: '#fff' }}>{value}</span>
+      <span className="text-[11px] uppercase tracking-widest" style={{ color: '#7a8ba3' }}>{label}</span>
     </div>
   );
 }

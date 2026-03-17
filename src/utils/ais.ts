@@ -53,10 +53,33 @@ export function getShipCategory(type: number): ShipCategory {
 }
 
 export function getShipTypeLabel(type: number): string {
-  return SHIP_TYPES[type] || 'Unknown';
+  return SHIP_TYPES[type] || (type === 0 ? 'Vessel' : 'Unknown');
 }
 
 const TANKER_NAME_RE = /tanker|crude|oil|petrol|lng|lpg|vlcc|ulcc|suezmax|aframax/i;
+
+/** Infer AIS ship type from vessel name when shipType is 0/unknown */
+const NAME_TYPE_PATTERNS: [RegExp, number][] = [
+  [/tanker|crude|oil|petrol|lng|lpg|vlcc|ulcc|suezmax|aframax|chemical/i, 80], // Tanker
+  [/bulk|cargo|container|general|carrier|feeder|box ship|freighter/i, 70],     // Cargo
+  [/tug|svitzer|smit|boluda/i, 52],                                            // Tug
+  [/pilot/i, 50],                                                              // Pilot
+  [/patrol|navy|military|warship|frigate|destroyer|corvette/i, 35],            // Military
+  [/fishing|trawl|seiner|longliner/i, 30],                                     // Fishing
+  [/passenger|ferry|cruise|roro/i, 60],                                        // Passenger
+  [/dredg/i, 33],                                                              // Dredger
+  [/yacht|pleasure/i, 37],                                                     // Pleasure
+  [/supply|offshore|anchor|platform|fpso|support/i, 59],                       // Special
+  [/sar|rescue|salvage/i, 51],                                                 // SAR
+];
+
+function inferShipTypeFromName(name: string): number {
+  if (!name) return 0;
+  for (const [pattern, type] of NAME_TYPE_PATTERNS) {
+    if (pattern.test(name)) return type;
+  }
+  return 0;
+}
 
 export function isTankerVessel(type: number, name: string): boolean {
   return (type >= 80 && type <= 89) || TANKER_NAME_RE.test(name);
@@ -79,12 +102,19 @@ export function formatSpeed(speed: number): string {
 
 import type { RawVessel, Vessel } from '../types';
 
+/** Cap AIS speed at 50 knots — anything above is almost certainly a data error */
+const MAX_REALISTIC_SPEED = 50;
+
 export function enrichVessel(raw: RawVessel): Vessel {
+  const speed = raw.speed > MAX_REALISTIC_SPEED ? 0 : raw.speed;
+  const shipType = raw.shipType || inferShipTypeFromName(raw.name);
   return {
     ...raw,
-    shipTypeLabel: getShipTypeLabel(raw.shipType),
-    category: getShipCategory(raw.shipType),
-    isTanker: isTankerVessel(raw.shipType, raw.name),
+    speed,
+    shipType,
+    shipTypeLabel: getShipTypeLabel(shipType),
+    category: getShipCategory(shipType),
+    isTanker: isTankerVessel(shipType, raw.name),
   };
 }
 

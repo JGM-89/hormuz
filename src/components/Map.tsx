@@ -344,6 +344,9 @@ export default function Map() {
           'line-opacity': ['get', 'opacity'],
         },
       });
+
+      // Signal that all overlay layers are ready for LayerToggle to restore persisted state
+      map.fire('layers-ready');
     });
 
     mapRef.current = map;

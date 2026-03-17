@@ -5,8 +5,10 @@ import { generateShippingForecast } from '../utils/shippingForecast';
 interface AudioState {
   enabled: boolean;
   volume: number;
+  ambienceVolume: number;   // 0-1 independent ambience level
+  radioVolume: number;      // 0-1 independent VHF level
   oceanEnabled: boolean;
-  sonarEnabled: boolean;
+  sonarEnabled: boolean;    // kept internally — tied to oceanEnabled
   radioEnabled: boolean;
   uiSoundsEnabled: boolean;
   radioStreamIndex: number; // -1 = auto (cascade), 0+ = specific stream
@@ -16,6 +18,8 @@ interface AudioState {
 const DEFAULT_STATE: AudioState = {
   enabled: false,
   volume: 0.3,
+  ambienceVolume: 0.7,
+  radioVolume: 0.7,
   oceanEnabled: true,
   sonarEnabled: true,
   radioEnabled: true,
@@ -41,7 +45,11 @@ function loadState(): AudioState {
         uiSoundsEnabled: parsed.uiSoundsEnabled ?? true,
       };
     }
-    return { ...DEFAULT_STATE, ...parsed };
+    // Ensure new fields have defaults
+    const state = { ...DEFAULT_STATE, ...parsed };
+    // Migrate: sonar follows ambience
+    state.sonarEnabled = state.oceanEnabled;
+    return state;
   } catch {
     return DEFAULT_STATE;
   }
@@ -83,8 +91,13 @@ function createPinkNoiseBuffer(ctx: AudioContext, durationSec: number): AudioBuf
  * 1. Pink noise bed (lowpass filtered) — warm deep ocean feel
  * 2. VHF static hiss (bandpass white noise) — always-on radio atmosphere
  */
-function createOceanLayer(ctx: AudioContext, masterGain: GainNode): AmbientLayer {
+function createOceanLayer(ctx: AudioContext, masterGain: GainNode, ambienceVolume: number = 0.7): AmbientLayer {
   const sources: AudioBufferSourceNode[] = [];
+
+  // Ambience sub-gain (controlled by ambienceVolume slider)
+  const ambienceGain = ctx.createGain();
+  ambienceGain.gain.value = ambienceVolume;
+  ambienceGain.connect(masterGain);
 
   // Layer 1: Pink noise ocean bed
   const bed = ctx.createBufferSource();
@@ -107,7 +120,7 @@ function createOceanLayer(ctx: AudioContext, masterGain: GainNode): AmbientLayer
   bed.connect(hp);
   hp.connect(lp);
   lp.connect(oceanGain);
-  oceanGain.connect(masterGain);
+  oceanGain.connect(ambienceGain);
   bed.start();
   sources.push(bed);
 
@@ -126,7 +139,7 @@ function createOceanLayer(ctx: AudioContext, masterGain: GainNode): AmbientLayer
 
   staticNoise.connect(staticBp);
   staticBp.connect(staticGain);
-  staticGain.connect(masterGain);
+  staticGain.connect(ambienceGain);
   staticNoise.start();
   sources.push(staticNoise);
 
@@ -136,13 +149,21 @@ function createOceanLayer(ctx: AudioContext, masterGain: GainNode): AmbientLayer
         try { s.stop(); } catch { /* already stopped */ }
       }
     },
+    setVolume: (v: number) => {
+      ambienceGain.gain.setValueAtTime(v, ctx.currentTime);
+    },
   };
 }
 
 /** Sonar ping — periodic sine tone with exponential decay and slight reverb tail */
-function createSonarLayer(ctx: AudioContext, masterGain: GainNode): AmbientLayer {
+function createSonarLayer(ctx: AudioContext, masterGain: GainNode, ambienceVolume: number = 0.7): AmbientLayer {
   let intervalId: ReturnType<typeof setInterval> | null = null;
   let stopped = false;
+
+  // Ambience sub-gain for sonar
+  const sonarAmbienceGain = ctx.createGain();
+  sonarAmbienceGain.gain.value = ambienceVolume;
+  sonarAmbienceGain.connect(masterGain);
 
   const ping = () => {
     if (stopped) return;
@@ -160,7 +181,7 @@ function createSonarLayer(ctx: AudioContext, masterGain: GainNode): AmbientLayer
       gain.gain.exponentialRampToValueAtTime(0.001, t + 1.4);
 
       osc.connect(gain);
-      gain.connect(masterGain);
+      gain.connect(sonarAmbienceGain);
 
       osc.start(t);
       osc.stop(t + 1.5);
@@ -176,6 +197,9 @@ function createSonarLayer(ctx: AudioContext, masterGain: GainNode): AmbientLayer
       stopped = true;
       clearTimeout(firstTimeout);
       if (intervalId) clearInterval(intervalId);
+    },
+    setVolume: (v: number) => {
+      sonarAmbienceGain.gain.setValueAtTime(v, ctx.currentTime);
     },
   };
 }
@@ -406,25 +430,25 @@ export function useAudio() {
     const master = masterGainRef.current!;
     const layers = layersRef.current;
 
-    // Ocean
+    // Ocean + Sonar (both controlled by ambience toggle)
     if (state.oceanEnabled && !layers.ocean) {
-      layers.ocean = createOceanLayer(ctx, master);
+      layers.ocean = createOceanLayer(ctx, master, state.ambienceVolume);
     } else if (!state.oceanEnabled && layers.ocean) {
       layers.ocean.stop();
       layers.ocean = null;
     }
 
-    // Sonar
-    if (state.sonarEnabled && !layers.sonar) {
-      layers.sonar = createSonarLayer(ctx, master);
-    } else if (!state.sonarEnabled && layers.sonar) {
+    // Sonar follows ambience toggle
+    if (state.oceanEnabled && !layers.sonar) {
+      layers.sonar = createSonarLayer(ctx, master, state.ambienceVolume);
+    } else if (!state.oceanEnabled && layers.sonar) {
       layers.sonar.stop();
       layers.sonar = null;
     }
 
     // Radio — recreate when stream selection changes
     if (state.radioEnabled && !layers.radio) {
-      layers.radio = createRadioLayer(ctx, master, state.volume, state.radioStreamIndex);
+      layers.radio = createRadioLayer(ctx, master, state.volume * state.radioVolume, state.radioStreamIndex);
     } else if (!state.radioEnabled && layers.radio) {
       layers.radio.stop();
       layers.radio = null;
@@ -441,20 +465,28 @@ export function useAudio() {
     return () => {
       teardownAll();
     };
-  }, [state.enabled, state.oceanEnabled, state.sonarEnabled, state.radioEnabled, state.radioStreamIndex, state.forecastEnabled]);
+  }, [state.enabled, state.oceanEnabled, state.radioEnabled, state.radioStreamIndex, state.forecastEnabled]);
 
-  // Update master volume (and radio which uses its own volume control)
+  // Update master volume and per-channel volumes
   useEffect(() => {
     if (masterGainRef.current) {
       masterGainRef.current.gain.setValueAtTime(state.volume, ctxRef.current?.currentTime ?? 0);
     }
+    // Ambience volume controls ocean + sonar layers
+    if (layersRef.current.ocean?.setVolume) {
+      layersRef.current.ocean.setVolume(state.ambienceVolume);
+    }
+    if (layersRef.current.sonar?.setVolume) {
+      layersRef.current.sonar.setVolume(state.ambienceVolume);
+    }
+    // Radio gets master * radioVolume
     if (layersRef.current.radio?.setVolume) {
-      layersRef.current.radio.setVolume(state.volume);
+      layersRef.current.radio.setVolume(state.volume * state.radioVolume);
     }
     if (layersRef.current.forecast?.setVolume) {
       layersRef.current.forecast.setVolume(state.volume);
     }
-  }, [state.volume]);
+  }, [state.volume, state.ambienceVolume, state.radioVolume]);
 
   // UI sound effect player
   const playSound = useCallback((type: 'ping' | 'alert' | 'click') => {
@@ -508,11 +540,19 @@ export function useAudio() {
   }, []);
 
   const toggleOcean = useCallback(() => {
-    setState(s => ({ ...s, oceanEnabled: !s.oceanEnabled }));
+    setState(s => ({ ...s, oceanEnabled: !s.oceanEnabled, sonarEnabled: !s.oceanEnabled }));
   }, []);
 
   const toggleSonar = useCallback(() => {
     setState(s => ({ ...s, sonarEnabled: !s.sonarEnabled }));
+  }, []);
+
+  const setAmbienceVolume = useCallback((v: number) => {
+    setState(s => ({ ...s, ambienceVolume: Math.max(0, Math.min(1, v)) }));
+  }, []);
+
+  const setRadioVolume = useCallback((v: number) => {
+    setState(s => ({ ...s, radioVolume: Math.max(0, Math.min(1, v)) }));
   }, []);
 
   const toggleRadio = useCallback(() => {
@@ -552,6 +592,8 @@ export function useAudio() {
     ...state,
     toggle,
     setVolume,
+    setAmbienceVolume,
+    setRadioVolume,
     toggleOcean,
     toggleSonar,
     toggleRadio,

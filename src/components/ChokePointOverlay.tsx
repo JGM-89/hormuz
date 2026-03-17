@@ -18,9 +18,9 @@ export default function ChokePointOverlay() {
   const eastbound = recentTransits.filter((t) => t.direction === 'eastbound').length;
   const westbound = recentTransits.filter((t) => t.direction === 'westbound').length;
 
-  // Speed anomaly detection
+  // Speed anomaly detection — flag only unrealistically fast vessels (>25 kn is unusual for this strait)
   const anomalies = [...vessels.values()].filter(
-    (v) => v.speed > 0.5 && (v.speed < 3 || v.speed > 16),
+    (v) => v.speed > 25,
   );
 
   return (
@@ -73,7 +73,7 @@ export default function ChokePointOverlay() {
             {anomalies.slice(0, 5).map((v) => (
               <div key={v.mmsi} className="text-[11px] text-text-primary flex justify-between" role="listitem">
                 <span className="truncate max-w-[140px]">{v.name}</span>
-                <span className={`font-data ${v.speed < 3 ? 'text-status-crit' : 'text-status-warn'}`}>
+                <span className="font-data text-status-warn">
                   {v.speed.toFixed(1)} kn
                 </span>
               </div>
