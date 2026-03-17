@@ -9,9 +9,20 @@ Real-time vessel tracking dashboard for the Strait of Hormuz, one of the world's
 ### Vessel Tracking
 - Live AIS vessel tracking via [AISStream.io](https://aisstream.io) WebSocket feed
 - Interactive map with vessel trails (MapLibre GL JS, dark basemap)
+- Click-to-select vessels with fly-to and detail panel (speed, course, heading, transit progress, nearby vessels)
 - Vessel category filters (tankers, cargo, passenger, etc.)
+- Ship type inference from vessel names when AIS type data is missing
 - Strait congestion monitoring with eastbound/westbound transit counts
-- Speed anomaly detection and stale signal alerts
+- Speed anomaly detection (>25 kn) with AIS speed cap at 30 kn to filter corrupt shore station data
+- Position validation — filters invalid coordinates and out-of-region vessels
+
+### Aircraft Tracking
+- Live aircraft tracking via [OpenSky Network](https://opensky-network.org/) API
+- Aircraft list with search, sort by callsign/altitude/speed
+- Click-to-select with fly-to and detail panel (altitude, flight level, speed, heading, origin country)
+- Military callsign detection (RCH, REACH, NAVY, etc.) with MIL badge
+- Altitude colour coding (amber < 1000m, cyan < 5000m, purple high altitude)
+- External tracking links (FlightRadar24, ADS-B Exchange)
 
 ### Intelligence Report
 - Full-screen 2-column intelligence report (Expand view)
@@ -32,11 +43,19 @@ Real-time vessel tracking dashboard for the Strait of Hormuz, one of the world's
 - BBC-style shipping forecast text display
 
 ### Audio System
-- Procedural ocean ambience (pink noise bed + VHF static hiss)
-- Sonar ping (periodic sine tone with exponential decay)
+- Procedural ocean ambience (pink noise bed + VHF static hiss + sonar ping)
+- Ambience volume slider (ocean + sonar combined)
 - Live marine VHF radio (7 Broadcastify streams, auto-cascade with manual selector)
+- VHF radio volume slider (independent of ambience)
 - Spoken shipping forecast via Web Speech API (British English, every 30 minutes)
 - Per-layer toggle controls with master volume
+
+### Map Layers
+- Traffic separation scheme (TSS) inbound/outbound lanes
+- Exclusive Economic Zone (EEZ) boundaries
+- Military base markers
+- ESRI satellite imagery (below place name labels for readability)
+- All layers on by default except satellite, with persisted toggle state
 
 ### News & Data
 - Maritime news ticker (Google News commodity/shipping search, gCaptain, Maritime Executive)
@@ -98,21 +117,28 @@ npm start
 
 ### Docker (NAS deployment)
 
+Use the one-click deploy script (saves env vars for future builds):
+
 ```bash
-# Build the image
+# Windows — double-click or run:
+deploy-nas.bat
+
+# Outputs hormuz.tar + hormuz-compose.yml in the project folder
+# Copy both to NAS → import via Synology Container Manager
+```
+
+Or build manually:
+
+```bash
 docker build -t hormuz-tracker .
-
-# Export for NAS
-docker save hormuz-tracker -o hormuz-tracker.tar
-
-# Copy .tar to NAS → import via Synology Container Manager
+docker save hormuz-tracker -o hormuz.tar
 ```
 
 ### Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `AIS_API_KEY` | — | AISStream.io API key (required) |
+| `AISSTREAM_API_KEY` | — | AISStream.io API key (required) |
 | `PORT` | `3001` | Server port |
 | `DB_PATH` | `./data/hormuz.db` | SQLite database path |
 | `BOUNDING_BOX` | `[[54.0,24.0],[58.5,27.5]]` | AIS geographic filter (JSON) |
@@ -121,8 +147,10 @@ docker save hormuz-tracker -o hormuz-tracker.tar
 | `PUSH_INTERVAL_MS` | `60000` | GitHub snapshot push interval |
 | `TRANSIT_LONGITUDE` | `56.5` | Longitude line for transit detection |
 | `GITHUB_TOKEN` | — | GitHub PAT for data branch pushes |
-| `GITHUB_OWNER` | — | GitHub repo owner |
-| `GITHUB_REPO` | — | GitHub repo name |
+| `GITHUB_REPO` | — | GitHub repo (owner/name format) |
+| `GITHUB_DATA_BRANCH` | `data` | Branch for data snapshots |
+| `OPENSKY_CLIENT_ID` | — | OpenSky Network OAuth client ID |
+| `OPENSKY_CLIENT_SECRET` | — | OpenSky Network OAuth client secret |
 
 ## License
 

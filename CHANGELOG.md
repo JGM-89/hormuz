@@ -1,5 +1,41 @@
 # Changelog
 
+## [0.9.0] - 2026-03-17
+
+### Added
+- Aircraft detail panel — click any aircraft in the list to see altitude, flight level, speed, heading, origin country, and external tracking links (FlightRadar24, ADS-B Exchange)
+- Aircraft fly-to — clicking an aircraft pans the map to its position
+- `deploy-nas.bat` — one-click Docker build script that saves env vars to `.env.nas` and generates `hormuz-compose.yml` for Synology Container Manager
+
+### Changed
+- Map default centre adjusted from strait-only to wider UAE coast + strait view so vessel markers are visible on initial load
+- AIS speed cap lowered from 50 kn to 30 kn (both server and client) to filter corrupt ~48.5 kn readings from faulty AISStream shore stations
+- Selecting an aircraft deselects any selected vessel and vice versa
+
+## [0.8.0] - 2026-03-16
+
+### Added
+- Aircraft tracking panel in left sidebar (tab bar: Vessels / Aircraft)
+- Aircraft list with search, sort by callsign/altitude/speed, military callsign detection
+- Ship type inference from vessel names (tanker, cargo, tug, military, etc.) when AIS type data is 0
+- Position validation — filters vessels with invalid or out-of-region coordinates
+- Separate volume sliders for ambience and VHF radio
+- ESRI satellite imagery layer (inserted below basemap labels for readability)
+- All map layers on by default except satellite, with localStorage persistence
+- Custom `layers-ready` event to fix layer toggle restore race condition
+
+### Changed
+- Sonar ping merged into ocean ambience toggle (no longer separate control)
+- Speed anomaly detection now flags >25 kn only (was flagging slow + fast)
+- Stats bar transit count uses inline styles for readability (was unreadable with Tailwind text-accent)
+- Forecast issued time uses explicit UTC hours/minutes (was showing invalid "29:45 UTC")
+
+### Fixed
+- Layer toggles not working on first page load (layers-ready event race condition)
+- Satellite imagery rendering on top of place name labels
+- Vessels appearing on land in clusters (corrupt AIS positions filtered)
+- "Everything moving fast" display issue (corrupt ~48.5 kn speeds from shore stations)
+
 ## [0.7.0] - 2026-03-14
 
 ### Added
