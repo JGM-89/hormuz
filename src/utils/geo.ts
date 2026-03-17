@@ -1,8 +1,8 @@
 // Strait of Hormuz Traffic Separation Scheme (approximate)
 // The strait is about 21nm wide at its narrowest point
 
-export const HORMUZ_CENTER: [number, number] = [56.3, 26.5];
-export const HORMUZ_ZOOM = 7.5;
+export const HORMUZ_CENTER: [number, number] = [55.8, 25.8]; // Wider view: UAE coast + strait
+export const HORMUZ_ZOOM = 7;
 
 // Approximate TSS lanes (GeoJSON LineStrings)
 export const TSS_INBOUND: [number, number][] = [

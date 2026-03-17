@@ -12,7 +12,7 @@ setlocal enabledelayedexpansion
 set "SCRIPT_DIR=%~dp0"
 :: Strip trailing backslash for Docker compatibility
 if "%SCRIPT_DIR:~-1%"=="\" set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
-set "OUTPUT_DIR=%USERPROFILE%\Documents"
+set "OUTPUT_DIR=%SCRIPT_DIR%"
 set "IMAGE_NAME=hormuz-tracker"
 set "TAR_PATH=%OUTPUT_DIR%\hormuz.tar"
 set "COMPOSE_PATH=%OUTPUT_DIR%\hormuz-compose.yml"
