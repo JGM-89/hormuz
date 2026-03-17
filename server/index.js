@@ -176,41 +176,94 @@ let reconnectTimer = null;
 
 function connectToAISStream() {
   if (!API_KEY) {
-    console.error('ERROR: AISSTREAM_API_KEY not set in .env file');
+    console.error('┌─────────────────────────────────────────────────┐');
+    console.error('│ FATAL: AISSTREAM_API_KEY not set in environment │');
+    console.error('│ Set it in .env or pass as env var to container  │');
+    console.error('└─────────────────────────────────────────────────┘');
     process.exit(1);
   }
 
-  console.log('Connecting to AISStream.io...');
+  console.log(`[AIS] Connecting to AISStream.io...`);
+  console.log(`[AIS] API key: ${API_KEY.slice(0, 8)}...${API_KEY.slice(-4)} (${API_KEY.length} chars)`);
   aisSocket = new WebSocket('wss://stream.aisstream.io/v0/stream');
 
   aisSocket.on('open', () => {
-    console.log('Connected to AISStream.io');
+    console.log('[AIS] ✓ WebSocket connected');
     aisConnectedSince = Date.now();
-    aisSocket.send(JSON.stringify({
+    const subscription = {
       APIKey: API_KEY,
       BoundingBoxes: [BOUNDING_BOX],
       FilterMessageTypes: ['PositionReport', 'ShipStaticData'],
-    }));
-    console.log(`Subscribed to bounding box: ${JSON.stringify(BOUNDING_BOX)}`);
+    };
+    aisSocket.send(JSON.stringify(subscription));
+    console.log(`[AIS] ✓ Subscription sent — bbox: ${JSON.stringify(BOUNDING_BOX)}`);
+    console.log(`[AIS]   Waiting for first message...`);
+
+    // Warn if no messages received after 30s (likely bad API key or bbox)
+    setTimeout(() => {
+      if (lastAisMessage === 0 && aisConnectedSince) {
+        console.warn('┌──────────────────────────────────────────────────────────────┐');
+        console.warn('│ WARNING: Connected 30s ago but ZERO messages received       │');
+        console.warn('│ Possible causes:                                            │');
+        console.warn('│  1. API key is invalid or expired — check AISStream account │');
+        console.warn('│  2. Bounding box has no traffic — unlikely for Hormuz       │');
+        console.warn('│  3. AISStream service is down — check aisstream.io/status   │');
+        console.warn('│                                                             │');
+        console.warn(`│ API key: ${API_KEY.slice(0, 8)}...${API_KEY.slice(-4)}${' '.repeat(Math.max(0, 39 - API_KEY.slice(0, 8).length - API_KEY.slice(-4).length))}│`);
+        console.warn(`│ Bbox: ${JSON.stringify(BOUNDING_BOX).slice(0, 52).padEnd(52)} │`);
+        console.warn('└──────────────────────────────────────────────────────────────┘');
+      }
+    }, 30_000);
   });
 
   let msgTotal = 0;
   aisSocket.on('message', (data) => {
+    const raw = data.toString();
+
+    // Catch AISStream error responses (e.g. invalid API key)
+    if (msgTotal === 0) {
+      try {
+        const firstMsg = JSON.parse(raw);
+        if (firstMsg.error || firstMsg.Error) {
+          const errMsg = firstMsg.error || firstMsg.Error || 'Unknown error';
+          console.error('┌──────────────────────────────────────────────────────┐');
+          console.error('│ AISStream returned an ERROR — check your config     │');
+          console.error(`│ Error: ${errMsg.slice(0, 48).padEnd(48)} │`);
+          console.error(`│ API key: ${API_KEY.slice(0, 8)}...${API_KEY.slice(-4)}${' '.repeat(Math.max(0, 39 - API_KEY.slice(0, 8).length - API_KEY.slice(-4).length))}│`);
+          console.error('└──────────────────────────────────────────────────────┘');
+          return;
+        }
+      } catch { /* not JSON or parse error, continue */ }
+    }
+
     try {
-      const parsed = JSON.parse(data.toString());
+      const parsed = JSON.parse(raw);
       lastAisMessage = Date.now();
       msgTotal++;
-      if (msgTotal <= 3 || msgTotal % 100 === 0) {
-        console.log(`[AIS] msg #${msgTotal} type=${parsed.MessageType} ship=${parsed.MetaData?.ShipName || '?'} shipType=${parsed.MetaData?.ShipType ?? '?'}`);
+      if (msgTotal === 1) {
+        console.log(`[AIS] ✓ First message received — stream is LIVE`);
+        console.log(`[AIS]   type=${parsed.MessageType} ship=${parsed.MetaData?.ShipName || '?'}`);
+      } else if (msgTotal <= 5 || msgTotal % 500 === 0) {
+        const elapsed = Math.round((Date.now() - aisConnectedSince) / 1000);
+        console.log(`[AIS] msg #${msgTotal} (${elapsed}s uptime, ${vessels.size} vessels tracked) type=${parsed.MessageType} ship=${parsed.MetaData?.ShipName || '?'}`);
       }
       handleAISMessage(parsed);
     } catch { /* skip */ }
   });
 
-  aisSocket.on('error', (err) => console.error('AISStream error:', err.message));
+  aisSocket.on('error', (err) => {
+    console.error(`[AIS] WebSocket error: ${err.message}`);
+    if (err.message.includes('401') || err.message.includes('403')) {
+      console.error('[AIS]   → This looks like an authentication error. Check your API key.');
+    }
+  });
 
-  aisSocket.on('close', () => {
-    console.log('AISStream disconnected, reconnecting in 5s...');
+  aisSocket.on('close', (code, reason) => {
+    const reasonStr = reason?.toString() || 'no reason';
+    console.log(`[AIS] Disconnected (code=${code}, reason="${reasonStr}"), reconnecting in 5s...`);
+    if (code === 1008 || code === 4001) {
+      console.warn('[AIS]   → Policy violation or auth error — API key may be invalid');
+    }
     aisConnectedSince = null;
     aisReconnects++;
     reconnectTimer = setTimeout(connectToAISStream, 5000);
@@ -310,6 +363,21 @@ setInterval(() => {
   hourlyEastbound = 0;
   hourlyWestbound = 0;
   hourlyMsgCount = 0;
+}, 300_000);
+
+// Periodic health log every 5 minutes
+setInterval(() => {
+  const health = getAisHealth();
+  const uptime = Math.round(process.uptime());
+  const uptimeStr = uptime > 3600 ? `${Math.floor(uptime / 3600)}h${Math.floor((uptime % 3600) / 60)}m` : `${Math.floor(uptime / 60)}m${uptime % 60}s`;
+  const lastMsg = health.lastMessage ? `${Math.round((Date.now() - health.lastMessage) / 1000)}s ago` : 'never';
+  console.log(`[STATUS] ${health.status.toUpperCase()} | ${vessels.size} vessels | ${messageCount} msgs total | last msg: ${lastMsg} | reconnects: ${health.reconnects} | uptime: ${uptimeStr} | clients: ${clients.size}`);
+  if (health.status === 'outage') {
+    console.warn(`[STATUS] ⚠ AIS stream connected but no messages in ${Math.round(health.timeSinceLastMsg / 1000)}s — possible AISStream outage`);
+  }
+  if (vessels.size === 0 && health.status === 'live') {
+    console.warn(`[STATUS] ⚠ Stream is live but 0 vessels — all positions may have been pruned as stale (threshold: ${STALE_MINUTES}m)`);
+  }
 }, 300_000);
 
 // Push to GitHub (always push — even with 0 vessels, frontend needs aisHealth + commodities)
@@ -580,10 +648,16 @@ async function handleAircraft(res) {
 
 // --- Start ---
 server.listen(PORT, () => {
-  console.log(`Server listening on http://localhost:${PORT}`);
-  console.log(`Config: bbox=${JSON.stringify(BOUNDING_BOX)} stale=${STALE_MINUTES}m trail=${MAX_TRAIL_POINTS}pts push=${PUSH_INTERVAL_MS}ms transit_lon=${TRANSIT_LONGITUDE}`);
-  console.log(`GitHub push: ${isGitHubConfigured() ? `enabled (every ${PUSH_INTERVAL_MS / 1000}s)` : 'disabled (set GITHUB_TOKEN + GITHUB_REPO)'}`);
-  console.log(`OpenSky: ${OPENSKY_CLIENT_ID ? `enabled (every ${OPENSKY_POLL_INTERVAL / 1000}s)` : 'disabled (set OPENSKY_CLIENT_ID + OPENSKY_CLIENT_SECRET)'}`);
+  console.log('┌────────────────────────────────────────┐');
+  console.log('│       HORMUZ TRACKER SERVER             │');
+  console.log('└────────────────────────────────────────┘');
+  console.log(`[BOOT] Port: ${PORT}`);
+  console.log(`[BOOT] Bounding box: ${JSON.stringify(BOUNDING_BOX)}`);
+  console.log(`[BOOT] Stale threshold: ${STALE_MINUTES}m | Trail points: ${MAX_TRAIL_POINTS} | Transit lon: ${TRANSIT_LONGITUDE}`);
+  console.log(`[BOOT] AISStream API key: ${API_KEY ? `${API_KEY.slice(0, 8)}...${API_KEY.slice(-4)} (${API_KEY.length} chars) ✓` : '✗ NOT SET'}`);
+  console.log(`[BOOT] GitHub push: ${isGitHubConfigured() ? `✓ every ${PUSH_INTERVAL_MS / 1000}s` : '✗ disabled (set GITHUB_TOKEN + GITHUB_REPO)'}`);
+  console.log(`[BOOT] OpenSky: ${OPENSKY_CLIENT_ID ? `✓ every ${OPENSKY_POLL_INTERVAL / 1000}s (client: ${OPENSKY_CLIENT_ID.slice(0, 12)}...)` : '✗ disabled (set OPENSKY_CLIENT_ID + OPENSKY_CLIENT_SECRET)'}`);
+  console.log(`[BOOT] Node ${process.version} | PID ${process.pid}`);
   connectToAISStream();
   // Pre-fetch commodity prices so they're cached before the first GitHub push
   fetchAllCommodities()
