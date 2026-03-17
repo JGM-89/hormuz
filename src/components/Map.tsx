@@ -4,6 +4,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { useStore } from '../store';
 import { HORMUZ_CENTER, HORMUZ_ZOOM, TSS_INBOUND, TSS_OUTBOUND, CHOKEPOINT_POLYGON, haversineNm } from '../utils/geo';
 import { getSpeedColor } from '../utils/ais';
+import { SHIPPING_LANES, EEZ_BOUNDARIES, MILITARY_BASES } from '../utils/overlays';
 import type { Vessel } from '../types';
 
 // Free dark tile style (no API key needed)
@@ -135,10 +136,10 @@ export default function Map() {
         },
       });
 
-      // ─── Shipping lanes (hidden by default, populated lazily) ───
+      // ─── Shipping lanes (hidden by default) ───
       map.addSource('shipping-lanes', {
         type: 'geojson',
-        data: { type: 'FeatureCollection', features: [] },
+        data: SHIPPING_LANES,
       });
       map.addLayer({
         id: 'shipping-lanes-major',
@@ -147,9 +148,9 @@ export default function Map() {
         filter: ['==', ['get', 'type'], 'major'],
         layout: { visibility: 'none' },
         paint: {
-          'line-color': '#3b82f6',
-          'line-width': 2.5,
-          'line-opacity': 0.5,
+          'line-color': '#60a5fa',
+          'line-width': 3,
+          'line-opacity': 0.6,
         },
       });
       map.addLayer({
@@ -159,17 +160,17 @@ export default function Map() {
         filter: ['==', ['get', 'type'], 'secondary'],
         layout: { visibility: 'none' },
         paint: {
-          'line-color': '#3b82f6',
-          'line-width': 1.5,
-          'line-opacity': 0.35,
+          'line-color': '#60a5fa',
+          'line-width': 2,
+          'line-opacity': 0.45,
           'line-dasharray': [6, 3],
         },
       });
 
-      // ─── EEZ boundaries (hidden by default, populated lazily) ───
+      // ─── EEZ boundaries (hidden by default) ───
       map.addSource('eez', {
         type: 'geojson',
-        data: { type: 'FeatureCollection', features: [] },
+        data: EEZ_BOUNDARIES,
       });
       map.addLayer({
         id: 'eez-lines',
@@ -177,17 +178,17 @@ export default function Map() {
         source: 'eez',
         layout: { visibility: 'none' },
         paint: {
-          'line-color': '#a855f7',
-          'line-width': 1.5,
-          'line-opacity': 0.4,
+          'line-color': '#c084fc',
+          'line-width': 2,
+          'line-opacity': 0.5,
           'line-dasharray': [4, 4],
         },
       });
 
-      // ─── Military bases (hidden by default, populated lazily) ───
+      // ─── Military bases (hidden by default) ───
       map.addSource('military-bases', {
         type: 'geojson',
-        data: { type: 'FeatureCollection', features: [] },
+        data: MILITARY_BASES,
       });
       map.addLayer({
         id: 'military-bases-circles',
@@ -195,7 +196,7 @@ export default function Map() {
         source: 'military-bases',
         layout: { visibility: 'none' },
         paint: {
-          'circle-radius': 6,
+          'circle-radius': 8,
           'circle-color': [
             'match', ['get', 'country'],
             'IR', '#ef4444',
@@ -222,7 +223,7 @@ export default function Map() {
           'text-size': 10,
           'text-offset': [0, 1.5],
           'text-anchor': 'top',
-          'text-font': ['Open Sans Regular'],
+          'text-font': ['Open Sans Regular', 'Arial Unicode MS Regular'],
         },
         paint: {
           'text-color': '#e2e8f0',

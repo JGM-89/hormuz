@@ -1,16 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { Layers, Plane, Ship, Shield, Satellite, MapPin } from 'lucide-react';
 import { mapInstanceRef } from './Map';
-import { getShippingLanes, getEEZBoundaries, getMilitaryBases } from '../utils/overlays';
 import { useStore } from '../store';
-import type maplibregl from 'maplibre-gl';
 
 interface LayerConfig {
   id: string;
   label: string;
   icon: React.ReactNode;
   mapLayers: string[];
-  loader?: () => Promise<{ source: string; data: GeoJSON.FeatureCollection }>;
 }
 
 const LAYERS: LayerConfig[] = [
@@ -25,14 +22,12 @@ const LAYERS: LayerConfig[] = [
     label: 'Shipping Lanes',
     icon: <Ship size={14} />,
     mapLayers: ['shipping-lanes-major', 'shipping-lanes-secondary'],
-    loader: async () => ({ source: 'shipping-lanes', data: await getShippingLanes() }),
   },
   {
     id: 'military-bases',
     label: 'Military Bases',
     icon: <Shield size={14} />,
     mapLayers: ['military-bases-circles', 'military-bases-labels'],
-    loader: async () => ({ source: 'military-bases', data: await getMilitaryBases() }),
   },
   {
     id: 'satellite',
@@ -45,7 +40,6 @@ const LAYERS: LayerConfig[] = [
     label: 'EEZ Boundaries',
     icon: <MapPin size={14} />,
     mapLayers: ['eez-lines'],
-    loader: async () => ({ source: 'eez', data: await getEEZBoundaries() }),
   },
 ];
 
@@ -65,30 +59,13 @@ function persistState(state: Record<string, boolean>) {
   } catch { /* ignore */ }
 }
 
-/** Load data into a map source and set layer visibility — pure map manipulation, no React state */
-async function activateLayer(map: maplibregl.Map, layer: LayerConfig, loadedSet: Set<string>) {
-  if (layer.loader && !loadedSet.has(layer.id)) {
-    try {
-      const { source, data } = await layer.loader();
-      const src = map.getSource(source) as maplibregl.GeoJSONSource | undefined;
-      if (src) src.setData(data);
-      loadedSet.add(layer.id);
-    } catch (err) {
-      console.warn(`Failed to load ${layer.id}:`, err);
-      return;
-    }
-  }
-  for (const layerId of layer.mapLayers) {
-    if (map.getLayer(layerId)) {
-      map.setLayoutProperty(layerId, 'visibility', 'visible');
-    }
-  }
-}
-
-function deactivateLayer(map: maplibregl.Map, layer: LayerConfig) {
-  for (const layerId of layer.mapLayers) {
-    if (map.getLayer(layerId)) {
-      map.setLayoutProperty(layerId, 'visibility', 'none');
+function setLayerVisibility(layerIds: string[], visible: boolean) {
+  const map = mapInstanceRef.current;
+  if (!map || !map.isStyleLoaded()) return;
+  const vis = visible ? 'visible' : 'none';
+  for (const id of layerIds) {
+    if (map.getLayer(id)) {
+      map.setLayoutProperty(id, 'visibility', vis);
     }
   }
 }
@@ -96,26 +73,24 @@ function deactivateLayer(map: maplibregl.Map, layer: LayerConfig) {
 export default function LayerToggle() {
   const [open, setOpen] = useState(false);
   const [enabled, setEnabled] = useState<Record<string, boolean>>(loadPersistedState);
-  const [loading, setLoading] = useState<Record<string, boolean>>({});
-  const loadedRef = useRef(new Set<string>());
   const aircraftCount = useStore((s) => s.aircraft.size);
   const restoredRef = useRef(false);
 
-  // On mount, restore persisted layer states once map is ready
+  // On mount, restore persisted layer visibility once map is ready
   useEffect(() => {
     if (restoredRef.current) return;
 
-    const tryRestore = () => {
+    const restore = () => {
       const map = mapInstanceRef.current;
       if (!map) return false;
 
-      const doRestore = async () => {
+      const doRestore = () => {
         if (restoredRef.current) return;
         restoredRef.current = true;
         const persisted = loadPersistedState();
         for (const layer of LAYERS) {
           if (persisted[layer.id]) {
-            await activateLayer(map, layer, loadedRef.current);
+            setLayerVisibility(layer.mapLayers, true);
           }
         }
       };
@@ -128,28 +103,17 @@ export default function LayerToggle() {
       return true;
     };
 
-    if (!tryRestore()) {
+    if (!restore()) {
       const timer = setInterval(() => {
-        if (tryRestore()) clearInterval(timer);
+        if (restore()) clearInterval(timer);
       }, 200);
       return () => clearInterval(timer);
     }
   }, []);
 
-  const handleToggle = async (layer: LayerConfig) => {
-    const map = mapInstanceRef.current;
-    if (!map || !map.isStyleLoaded()) return;
-
+  const handleToggle = (layer: LayerConfig) => {
     const newState = !enabled[layer.id];
-
-    if (newState) {
-      setLoading((p) => ({ ...p, [layer.id]: true }));
-      await activateLayer(map, layer, loadedRef.current);
-      setLoading((p) => ({ ...p, [layer.id]: false }));
-    } else {
-      deactivateLayer(map, layer);
-    }
-
+    setLayerVisibility(layer.mapLayers, newState);
     setEnabled((prev) => {
       const next = { ...prev, [layer.id]: newState };
       persistState(next);
@@ -197,13 +161,8 @@ export default function LayerToggle() {
                   {layer.label}
                 </span>
 
-                {/* Loading spinner */}
-                {loading[layer.id] && (
-                  <div className="ml-auto w-3 h-3 border border-accent-cyan border-t-transparent rounded-full animate-spin" />
-                )}
-
                 {/* Aircraft count badge */}
-                {layer.id === 'aircraft' && enabled[layer.id] && aircraftCount > 0 && !loading[layer.id] && (
+                {layer.id === 'aircraft' && enabled[layer.id] && aircraftCount > 0 && (
                   <span className="ml-auto text-[9px] font-data text-accent-cyan">{aircraftCount}</span>
                 )}
               </button>
