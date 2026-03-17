@@ -1,10 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import MapLibreWorker from 'maplibre-gl/dist/maplibre-gl-csp-worker?worker';
-
-// Use Vite's ?worker import so the worker is bundled inline — works on any base path
-(maplibregl as unknown as { workerClass: unknown }).workerClass = MapLibreWorker;
 import { useStore } from '../store';
 import { HORMUZ_CENTER, HORMUZ_ZOOM, TSS_INBOUND, TSS_OUTBOUND, CHOKEPOINT_POLYGON, haversineNm } from '../utils/geo';
 import { getSpeedColor } from '../utils/ais';
