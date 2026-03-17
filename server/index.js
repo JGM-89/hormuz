@@ -316,7 +316,7 @@ function handleAISMessage(msg) {
     name: name || `Unknown (${mmsi})`,
     lat,
     lon,
-    speed: pos.Sog ?? 0,
+    speed: (pos.Sog ?? 0) > 30 ? 0 : (pos.Sog ?? 0), // Cap at 30kn — AIS shore stations send corrupt ~48.5kn
     course: pos.Cog ?? 0,
     heading: pos.TrueHeading ?? pos.Cog ?? 0,
     shipType,

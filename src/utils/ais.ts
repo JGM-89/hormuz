@@ -103,8 +103,9 @@ export function formatSpeed(speed: number): string {
 
 import type { RawVessel, Vessel } from '../types';
 
-/** Cap AIS speed at 50 knots — anything above is almost certainly a data error */
-const MAX_REALISTIC_SPEED = 50;
+/** Cap AIS speed at 30 knots — fastest Gulf traffic is ~25kn (container ships).
+ *  AISStream often sends corrupt ~48.5kn from faulty shore stations. */
+const MAX_REALISTIC_SPEED = 30;
 
 /** Check if coordinates are valid and within the Gulf region */
 export function isValidPosition(lat: number, lon: number): boolean {
