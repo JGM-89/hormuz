@@ -53,16 +53,17 @@ export default function Map() {
       // ─── Satellite raster source (hidden by default, added first so it's below everything) ───
       map.addSource('satellite-tiles', {
         type: 'raster',
-        tiles: ['https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2021_3857/default/GoogleMapsCompatible/{z}/{y}/{x}.jpg'],
+        tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
         tileSize: 256,
-        attribution: '&copy; EOX / Sentinel-2',
+        maxzoom: 19,
+        attribution: '&copy; Esri, Maxar, Earthstar Geographics',
       });
       map.addLayer({
         id: 'satellite',
         type: 'raster',
         source: 'satellite-tiles',
         layout: { visibility: 'none' },
-        paint: { 'raster-opacity': 0.7 },
+        paint: { 'raster-opacity': 0.85 },
       });
 
       // ─── TSS lanes ───
