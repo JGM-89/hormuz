@@ -557,15 +557,21 @@ let openskyTokenExpiry = 0;
 
 async function getOpenSkyToken() {
   if (openskyToken && Date.now() < openskyTokenExpiry) return openskyToken;
-  const res = await fetch('https://opensky-network.org/api/oauth/token', {
+  const tokenUrl = 'https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token';
+  console.log(`[Aircraft] Requesting OAuth2 token from ${tokenUrl}`);
+  const res = await fetch(tokenUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: `grant_type=client_credentials&client_id=${encodeURIComponent(OPENSKY_CLIENT_ID)}&client_secret=${encodeURIComponent(OPENSKY_CLIENT_SECRET)}`,
   });
-  if (!res.ok) throw new Error(`OpenSky OAuth2 failed: ${res.status}`);
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`OpenSky OAuth2 failed: ${res.status} ${body.slice(0, 200)}`);
+  }
   const data = await res.json();
   openskyToken = data.access_token;
-  openskyTokenExpiry = Date.now() + (data.expires_in - 60) * 1000;
+  openskyTokenExpiry = Date.now() + ((data.expires_in || 1800) - 60) * 1000;
+  console.log(`[Aircraft] ✓ OAuth2 token obtained (expires in ${data.expires_in || '?'}s)`);
   return openskyToken;
 }
 

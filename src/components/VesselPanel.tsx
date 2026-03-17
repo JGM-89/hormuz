@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useStore } from '../store';
 import { getNavStatusLabel, getSpeedColor, formatSpeed, timeAgo } from '../utils/ais';
 import { getTransitProgress, haversineNm } from '../utils/geo';
@@ -8,6 +8,16 @@ export default function VesselPanel() {
   const selectedVessel = useStore((s) => s.selectedVessel);
   const vessels = useStore((s) => s.vessels);
   const setSelectedVessel = useStore((s) => s.setSelectedVessel);
+
+  // Escape key to close
+  useEffect(() => {
+    if (!selectedVessel) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelectedVessel(null);
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [selectedVessel, setSelectedVessel]);
 
   if (!selectedVessel) return null;
   const vessel = vessels.get(selectedVessel);

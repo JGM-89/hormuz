@@ -40,7 +40,7 @@ export default function Map() {
       pitch: 0,
       bearing: 0,
       minZoom: 5,
-      maxZoom: 15,
+      maxZoom: 18,
     });
 
     map.addControl(new maplibregl.NavigationControl(), 'top-right');
@@ -48,6 +48,14 @@ export default function Map() {
       new maplibregl.ScaleControl({ maxWidth: 200, unit: 'nautical' }),
       'bottom-left',
     );
+
+    // Click on empty map area to deselect vessel
+    map.on('click', (e) => {
+      // Check if the click hit a vessel marker (DOM markers sit above the canvas)
+      const target = e.originalEvent.target as HTMLElement;
+      if (target.closest('.vessel-marker')) return;
+      useStore.getState().setSelectedVessel(null);
+    });
 
     map.on('load', () => {
       // ─── Satellite raster source (hidden by default, added first so it's below everything) ───
@@ -378,12 +386,27 @@ export default function Map() {
     source.setData({ type: 'FeatureCollection', features });
   }, [aircraft]);
 
-  // Update trail when vessel selected
+  // Fly to vessel + show trail when selected
   const selectedVessel = useStore((s) => s.selectedVessel);
+  const prevSelectedRef = useRef<string | null>(null);
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
 
+    // Fly to vessel when newly selected (not on every vessels update)
+    if (selectedVessel && selectedVessel !== prevSelectedRef.current) {
+      const vessel = vessels.get(selectedVessel);
+      if (vessel) {
+        map.flyTo({
+          center: [vessel.lon, vessel.lat],
+          zoom: Math.max(map.getZoom(), 10),
+          duration: 1200,
+        });
+      }
+    }
+    prevSelectedRef.current = selectedVessel;
+
+    // Update trail
     const source = map.getSource('vessel-trail') as maplibregl.GeoJSONSource | undefined;
     if (!source) return;
 
@@ -393,7 +416,7 @@ export default function Map() {
     }
 
     const vessel = vessels.get(selectedVessel);
-    if (!vessel || vessel.trail.length < 2) {
+    if (!vessel || !vessel.trail || vessel.trail.length < 2) {
       source.setData({ type: 'FeatureCollection', features: [] });
       return;
     }
