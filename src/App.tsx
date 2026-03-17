@@ -4,6 +4,7 @@ import Map from './components/Map';
 import LogoPill from './components/LogoPill';
 import FloatingStats from './components/FloatingStats';
 import VesselPanel from './components/VesselPanel';
+import AircraftPanel from './components/AircraftPanel';
 import ChokePointOverlay from './components/ChokePointOverlay';
 import AnalyticsModal from './components/AnalyticsModal';
 import OutageOverlay from './components/OutageOverlay';
@@ -157,6 +158,7 @@ export default function App() {
       {/* ── OVERLAYS ── */}
       {/* Vessel detail panel (slides over from right) */}
       <VesselPanel />
+      <AircraftPanel />
 
       {/* Full analytics modal */}
       <AnalyticsModal open={analyticsOpen} onClose={() => setAnalyticsOpen(false)} />

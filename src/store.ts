@@ -22,6 +22,7 @@ interface AisHealth {
 interface AppState {
   vessels: Map<string, Vessel>;
   selectedVessel: string | null;
+  selectedAircraft: string | null;
   stats: Stats;
   transitHistory: Transit[];
   historicalData: HistoricalData | null;
@@ -36,6 +37,7 @@ interface AppState {
   dataMode: 'github' | 'api' | 'ws';
   lastFetch: number;
   setSelectedVessel: (mmsi: string | null) => void;
+  setSelectedAircraft: (icao24: string | null) => void;
   handleMessage: (msg: WSMessage) => void;
   setConnected: (connected: boolean) => void;
   setHistoricalData: (data: HistoricalData) => void;
@@ -88,6 +90,7 @@ function enrichVesselMap(raw: Record<string, RawVessel>): Map<string, Vessel> {
 export const useStore = create<AppState>((set) => ({
   vessels: new Map(),
   selectedVessel: null,
+  selectedAircraft: null,
   stats: defaultStats,
   transitHistory: [],
   historicalData: null,
@@ -102,7 +105,8 @@ export const useStore = create<AppState>((set) => ({
   dataMode: getDataMode(),
   lastFetch: 0,
 
-  setSelectedVessel: (mmsi) => set({ selectedVessel: mmsi }),
+  setSelectedVessel: (mmsi) => set({ selectedVessel: mmsi, selectedAircraft: null }),
+  setSelectedAircraft: (icao24) => set({ selectedAircraft: icao24, selectedVessel: null }),
   setConnected: (connected) => set({ connected }),
   setHistoricalData: (data) => set({ historicalData: data }),
   setAisHealth: (health) => set({ aisHealth: health }),

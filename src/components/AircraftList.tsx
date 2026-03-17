@@ -29,6 +29,8 @@ function isMilitaryCallsign(callsign: string): boolean {
 
 export default function AircraftList() {
   const aircraft = useStore((s) => s.aircraft);
+  const selectedAircraft = useStore((s) => s.selectedAircraft);
+  const setSelectedAircraft = useStore((s) => s.setSelectedAircraft);
   const [filter, setFilter] = useState('');
   const [sortKey, setSortKey] = useState<'callsign' | 'altitude' | 'velocity'>('altitude');
   const [sortAsc, setSortAsc] = useState(false);
@@ -117,7 +119,7 @@ export default function AircraftList() {
           </div>
         ) : (
           sorted.map((ac) => (
-            <AircraftRow key={ac.icao24} aircraft={ac} />
+            <AircraftRow key={ac.icao24} aircraft={ac} selected={selectedAircraft === ac.icao24} onSelect={setSelectedAircraft} />
           ))
         )}
       </div>
@@ -125,14 +127,19 @@ export default function AircraftList() {
   );
 }
 
-function AircraftRow({ aircraft: ac }: { aircraft: Aircraft }) {
+function AircraftRow({ aircraft: ac, selected, onSelect }: { aircraft: Aircraft; selected: boolean; onSelect: (icao24: string) => void }) {
   const isMil = isMilitaryCallsign(ac.callsign);
   const borderColor = isMil ? 'border-l-red-400' : 'border-l-purple-400';
 
   return (
-    <div
+    <button
       role="listitem"
-      className={`w-full text-left px-3 py-2.5 border-b border-border-dim border-l-2 ${borderColor}`}
+      onClick={() => onSelect(ac.icao24)}
+      className={`w-full text-left px-3 py-2.5 border-b border-border-dim transition-colors focus:outline-none focus:bg-surface-2 border-l-2 ${
+        selected
+          ? 'bg-accent/10 border-l-accent'
+          : `hover:bg-surface-1 ${borderColor}`
+      }`}
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
@@ -165,7 +172,7 @@ function AircraftRow({ aircraft: ac }: { aircraft: Aircraft }) {
         </span>
         <span className="text-[11px] text-text-dim font-data">{formatVelocity(ac.velocity)}</span>
       </div>
-    </div>
+    </button>
   );
 }
 

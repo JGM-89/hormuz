@@ -395,6 +395,25 @@ export default function Map() {
     source.setData({ type: 'FeatureCollection', features });
   }, [aircraft]);
 
+  // Fly to aircraft when selected
+  const selectedAircraft = useStore((s) => s.selectedAircraft);
+  const prevSelectedAcRef = useRef<string | null>(null);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded()) return;
+    if (selectedAircraft && selectedAircraft !== prevSelectedAcRef.current) {
+      const ac = aircraft.get(selectedAircraft);
+      if (ac) {
+        map.flyTo({
+          center: [ac.lon, ac.lat],
+          zoom: Math.max(map.getZoom(), 10),
+          duration: 1200,
+        });
+      }
+    }
+    prevSelectedAcRef.current = selectedAircraft;
+  }, [selectedAircraft, aircraft]);
+
   // Fly to vessel + show trail when selected
   const selectedVessel = useStore((s) => s.selectedVessel);
   const prevSelectedRef = useRef<string | null>(null);
