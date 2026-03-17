@@ -3,7 +3,8 @@ import maplibregl, { setWorkerUrl } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 // Fix MapLibre v5 worker __publicField error with Vite
-setWorkerUrl('/maplibre-gl-csp-worker.js');
+// Use import.meta.env.BASE_URL so it works on both localhost (/) and GitHub Pages (/hormuz/)
+setWorkerUrl(`${import.meta.env.BASE_URL}maplibre-gl-csp-worker.js`);
 import { useStore } from '../store';
 import { HORMUZ_CENTER, HORMUZ_ZOOM, TSS_INBOUND, TSS_OUTBOUND, CHOKEPOINT_POLYGON, haversineNm } from '../utils/geo';
 import { getSpeedColor } from '../utils/ais';
