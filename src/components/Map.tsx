@@ -1,6 +1,9 @@
 import { useEffect, useRef, useCallback } from 'react';
-import maplibregl from 'maplibre-gl';
+import maplibregl, { setWorkerUrl } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+
+// Fix MapLibre v5 worker __publicField error with Vite
+setWorkerUrl('/maplibre-gl-csp-worker.js');
 import { useStore } from '../store';
 import { HORMUZ_CENTER, HORMUZ_ZOOM, TSS_INBOUND, TSS_OUTBOUND, CHOKEPOINT_POLYGON, haversineNm } from '../utils/geo';
 import { getSpeedColor } from '../utils/ais';
@@ -78,6 +81,7 @@ export default function Map() {
         id: 'tss-inbound',
         type: 'line',
         source: 'tss-inbound',
+        layout: { visibility: 'none' },
         paint: {
           'line-color': '#22d3ee',
           'line-width': 2,
@@ -98,6 +102,7 @@ export default function Map() {
         id: 'tss-outbound',
         type: 'line',
         source: 'tss-outbound',
+        layout: { visibility: 'none' },
         paint: {
           'line-color': '#f59e0b',
           'line-width': 2,
@@ -119,6 +124,7 @@ export default function Map() {
         id: 'chokepoint-fill',
         type: 'fill',
         source: 'chokepoint',
+        layout: { visibility: 'none' },
         paint: {
           'fill-color': '#06b6d4',
           'fill-opacity': 0.05,
@@ -128,6 +134,7 @@ export default function Map() {
         id: 'chokepoint-border',
         type: 'line',
         source: 'chokepoint',
+        layout: { visibility: 'none' },
         paint: {
           'line-color': '#06b6d4',
           'line-width': 1,

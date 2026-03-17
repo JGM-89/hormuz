@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Layers, Plane, Ship, Shield, Satellite, MapPin } from 'lucide-react';
+import { Layers, Plane, Ship, Shield, Satellite, MapPin, Navigation } from 'lucide-react';
 import { mapInstanceRef } from './Map';
 import { useStore } from '../store';
 
@@ -40,6 +40,12 @@ const LAYERS: LayerConfig[] = [
     label: 'EEZ Boundaries',
     icon: <MapPin size={14} />,
     mapLayers: ['eez-lines'],
+  },
+  {
+    id: 'tss',
+    label: 'TSS / Chokepoint',
+    icon: <Navigation size={14} />,
+    mapLayers: ['tss-inbound', 'tss-outbound', 'chokepoint-fill', 'chokepoint-border'],
   },
 ];
 
