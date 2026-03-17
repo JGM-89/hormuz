@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 :: ─────────────────────────────────────────────────
-:: Hormuz Tracker — Build ^& Deploy to Synology NAS
+:: Hormuz Tracker — Build & Deploy to Synology NAS
 :: ─────────────────────────────────────────────────
 :: Usage: deploy-nas.bat
 ::
