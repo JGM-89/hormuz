@@ -142,6 +142,19 @@ export interface WeatherState {
   daily: WeatherForecastDay[];
 }
 
+export interface Aircraft {
+  icao24: string;
+  callsign: string;
+  originCountry: string;
+  lat: number;
+  lon: number;
+  altitude: number;
+  velocity: number;
+  heading: number;
+  onGround: boolean;
+  category: number;
+}
+
 export type WSMessage =
   | { type: 'snapshot'; vessels: Record<string, RawVessel>; stats?: Stats; transitHistory: Transit[] }
   | { type: 'vessel_update'; vessel: RawVessel; stats?: Stats }

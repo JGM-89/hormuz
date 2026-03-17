@@ -111,6 +111,8 @@ const server = createServer((req, res) => {
       res.end(JSON.stringify(getDbStats()));
     } else if (req.url === '/api/commodities') {
       handleCommodities(res);
+    } else if (req.url === '/api/aircraft') {
+      handleAircraft(res);
     } else if (req.url === '/api/health') {
       res.end(JSON.stringify({ status: 'ok', uptime: process.uptime(), github: isGitHubConfigured() }));
     } else {
@@ -321,7 +323,8 @@ setInterval(async () => {
   };
   // Include cached commodity data so GitHub Pages gets real prices
   const commodities = commodityCache || [];
-  await pushSnapshot(vessels, transitHistory, historicalData, getAisHealth(), commodities);
+  const aircraft = aircraftCache || [];
+  await pushSnapshot(vessels, transitHistory, historicalData, getAisHealth(), commodities, aircraft);
 }, PUSH_INTERVAL_MS);
 
 // --- Commodity Price Proxy ---
@@ -473,16 +476,125 @@ async function handleCommodities(res) {
   }
 }
 
+// --- OpenSky Aircraft Proxy ---
+const OPENSKY_CLIENT_ID = process.env.OPENSKY_CLIENT_ID;
+const OPENSKY_CLIENT_SECRET = process.env.OPENSKY_CLIENT_SECRET;
+const OPENSKY_POLL_INTERVAL = 30_000; // 30s = 2880 calls/day (within 4000 limit)
+const OPENSKY_BBOX = `lamin=${BOUNDING_BOX[0][0]}&lomin=${BOUNDING_BOX[0][1]}&lamax=${BOUNDING_BOX[1][0]}&lomax=${BOUNDING_BOX[1][1]}`;
+
+let aircraftCache = null;
+let aircraftCacheTime = 0;
+let openskyToken = null;
+let openskyTokenExpiry = 0;
+
+async function getOpenSkyToken() {
+  if (openskyToken && Date.now() < openskyTokenExpiry) return openskyToken;
+  const res = await fetch('https://opensky-network.org/api/oauth/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `grant_type=client_credentials&client_id=${encodeURIComponent(OPENSKY_CLIENT_ID)}&client_secret=${encodeURIComponent(OPENSKY_CLIENT_SECRET)}`,
+  });
+  if (!res.ok) throw new Error(`OpenSky OAuth2 failed: ${res.status}`);
+  const data = await res.json();
+  openskyToken = data.access_token;
+  openskyTokenExpiry = Date.now() + (data.expires_in - 60) * 1000;
+  return openskyToken;
+}
+
+async function fetchAircraft() {
+  if (!OPENSKY_CLIENT_ID || !OPENSKY_CLIENT_SECRET) return [];
+  try {
+    const token = await getOpenSkyToken();
+    const res = await fetch(`https://opensky-network.org/api/states/all?${OPENSKY_BBOX}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.status === 401) {
+      // Token expired, invalidate and retry once
+      openskyToken = null;
+      const freshToken = await getOpenSkyToken();
+      const retry = await fetch(`https://opensky-network.org/api/states/all?${OPENSKY_BBOX}`, {
+        headers: { Authorization: `Bearer ${freshToken}` },
+      });
+      if (!retry.ok) throw new Error(`OpenSky retry failed: ${retry.status}`);
+      const data = await retry.json();
+      return parseAircraftStates(data);
+    }
+    if (!res.ok) throw new Error(`OpenSky fetch failed: ${res.status}`);
+    const data = await res.json();
+    return parseAircraftStates(data);
+  } catch (err) {
+    console.error(`[Aircraft] Fetch error: ${err.message}`);
+    return aircraftCache || [];
+  }
+}
+
+function parseAircraftStates(data) {
+  if (!data?.states) return [];
+  return data.states
+    .filter(s => s[8] !== true) // filter out on_ground
+    .filter(s => s[6] != null && s[5] != null) // must have lat/lon
+    .map(s => ({
+      icao24: s[0],
+      callsign: (s[1] || '').trim(),
+      originCountry: s[2],
+      lat: s[6],
+      lon: s[5],
+      altitude: s[7] || s[13] || 0,
+      velocity: s[9] || 0,
+      heading: s[10] || 0,
+      onGround: s[8],
+      category: s[17] || 0,
+    }));
+}
+
+async function pollAircraft() {
+  const data = await fetchAircraft();
+  if (data.length > 0 || !aircraftCache) {
+    aircraftCache = data;
+    aircraftCacheTime = Date.now();
+  }
+  return data;
+}
+
+if (OPENSKY_CLIENT_ID && OPENSKY_CLIENT_SECRET) {
+  setInterval(pollAircraft, OPENSKY_POLL_INTERVAL);
+}
+
+async function handleAircraft(res) {
+  try {
+    if (!OPENSKY_CLIENT_ID) {
+      res.end(JSON.stringify([]));
+      return;
+    }
+    if (aircraftCache && Date.now() - aircraftCacheTime < OPENSKY_POLL_INTERVAL * 2) {
+      res.end(JSON.stringify(aircraftCache));
+    } else {
+      const data = await pollAircraft();
+      res.end(JSON.stringify(data));
+    }
+  } catch (err) {
+    console.error('[Aircraft] Handler error:', err.message);
+    res.end(JSON.stringify(aircraftCache || []));
+  }
+}
+
 // --- Start ---
 server.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);
   console.log(`Config: bbox=${JSON.stringify(BOUNDING_BOX)} stale=${STALE_MINUTES}m trail=${MAX_TRAIL_POINTS}pts push=${PUSH_INTERVAL_MS}ms transit_lon=${TRANSIT_LONGITUDE}`);
   console.log(`GitHub push: ${isGitHubConfigured() ? `enabled (every ${PUSH_INTERVAL_MS / 1000}s)` : 'disabled (set GITHUB_TOKEN + GITHUB_REPO)'}`);
+  console.log(`OpenSky: ${OPENSKY_CLIENT_ID ? `enabled (every ${OPENSKY_POLL_INTERVAL / 1000}s)` : 'disabled (set OPENSKY_CLIENT_ID + OPENSKY_CLIENT_SECRET)'}`);
   connectToAISStream();
   // Pre-fetch commodity prices so they're cached before the first GitHub push
   fetchAllCommodities()
     .then(data => console.log(`[Commodities] Initial fetch: ${data.length} commodities loaded`))
     .catch(err => console.warn(`[Commodities] Initial fetch failed: ${err.message}`));
+  // Pre-fetch aircraft data
+  if (OPENSKY_CLIENT_ID) {
+    pollAircraft()
+      .then(data => console.log(`[Aircraft] Initial fetch: ${data.length} aircraft`))
+      .catch(err => console.warn(`[Aircraft] Initial fetch failed: ${err.message}`));
+  }
 });
 
 process.on('SIGINT', () => {

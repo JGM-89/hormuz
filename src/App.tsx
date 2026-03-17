@@ -14,6 +14,7 @@ import AnalyticsSidebar from './components/AnalyticsSidebar';
 import CommodityPanel from './components/CommodityPanel';
 import WeatherPanel from './components/WeatherPanel';
 import AudioController from './components/AudioController';
+import LayerToggle from './components/LayerToggle';
 
 // Icons for panel collapse state
 const VesselIcon = () => (
@@ -84,6 +85,8 @@ export default function App() {
             <div className="absolute bottom-8 left-3 pointer-events-auto max-w-[260px]">
               <ChokePointOverlay />
             </div>
+            {/* Bottom-right: Layer toggle */}
+            <LayerToggle />
           </div>
         </div>
 

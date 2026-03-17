@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Vessel, RawVessel, Transit, Stats, WSMessage, HistoricalData, NewsItem, OilPrice, CommodityData, WeatherState } from './types';
+import type { Vessel, RawVessel, Transit, Stats, WSMessage, HistoricalData, NewsItem, OilPrice, CommodityData, WeatherState, Aircraft } from './types';
 import { enrichVessel } from './utils/ais';
 
 // Data source config — set via env vars at build time
@@ -30,6 +30,7 @@ interface AppState {
   oilPrice: OilPrice | null;
   commodities: CommodityData[];
   weather: WeatherState;
+  aircraft: Map<string, Aircraft>;
   expandedCommodity: string | null;
   connected: boolean;
   dataMode: 'github' | 'api' | 'ws';
@@ -43,6 +44,7 @@ interface AppState {
   setOilPrice: (price: OilPrice | null) => void;
   setCommodities: (data: CommodityData[]) => void;
   setWeather: (data: WeatherState) => void;
+  setAircraft: (data: Aircraft[]) => void;
   setExpandedCommodity: (symbol: string | null) => void;
   setLiveData: (vessels: Record<string, RawVessel>, stats: Partial<Stats> | undefined, transits: Transit[], aisHealth?: AisHealth | null) => void;
 }
@@ -91,6 +93,7 @@ export const useStore = create<AppState>((set) => ({
   oilPrice: null,
   commodities: [],
   weather: { current: null, daily: [] },
+  aircraft: new Map(),
   expandedCommodity: null,
   connected: false,
   dataMode: getDataMode(),
@@ -103,6 +106,7 @@ export const useStore = create<AppState>((set) => ({
   setNews: (news) => set({ news }),
   setOilPrice: (price) => set({ oilPrice: price }),
   setCommodities: (data) => set({ commodities: data }),
+  setAircraft: (data) => set({ aircraft: new Map(data.map(a => [a.icao24, a])) }),
   setWeather: (data) => set({ weather: data }),
   setExpandedCommodity: (symbol) => set({ expandedCommodity: symbol }),
 
@@ -204,6 +208,9 @@ async function pollGitHub() {
     fetchJSON(`${GITHUB_RAW_BASE}/live/commodities.json`)
       .then(data => { if (data?.commodities?.length > 0) useStore.getState().setCommodities(data.commodities); })
       .catch(() => {});
+    fetchJSON(`${GITHUB_RAW_BASE}/live/aircraft.json`)
+      .then(data => { if (data?.aircraft) useStore.getState().setAircraft(data.aircraft); })
+      .catch(() => {});
   } catch (err) {
     console.warn('GitHub poll failed:', err);
     useStore.getState().setConnected(false);
@@ -230,6 +237,10 @@ async function pollAPI() {
     fetchJSON(`${API_BASE}/api/commodities`)
       .then(data => { if (Array.isArray(data) && data.length > 0) useStore.getState().setCommodities(data); })
       .catch(() => {});
+    // Fetch aircraft positions (non-blocking, fail silently)
+    fetchJSON(`${API_BASE}/api/aircraft`)
+      .then(data => { if (Array.isArray(data) && data.length > 0) useStore.getState().setAircraft(data); })
+      .catch(() => {});
   } catch (err) {
     console.warn('API poll failed:', err);
     useStore.getState().setConnected(false);
@@ -249,15 +260,30 @@ async function pollCommodities() {
   } catch { /* silent */ }
 }
 
+// Poll aircraft positions from NAS server (works in both WS and API modes)
+let aircraftPollInterval: ReturnType<typeof setInterval> | null = null;
+
+async function pollAircraft() {
+  const base = API_BASE || `${window.location.protocol}//${window.location.host}`;
+  try {
+    const data = await fetchJSON(`${base}/api/aircraft`);
+    if (Array.isArray(data) && data.length > 0) {
+      useStore.getState().setAircraft(data);
+    }
+  } catch { /* silent */ }
+}
+
 export function connectDataSource() {
   const mode = getDataMode();
   console.log(`Data mode: ${mode}`);
 
   if (mode === 'ws') {
     connectWebSocketMode();
-    // Also poll commodities from the same server
+    // Also poll commodities + aircraft from the same server
     pollCommodities();
     commodityPollInterval = setInterval(pollCommodities, 5 * 60_000);
+    pollAircraft();
+    aircraftPollInterval = setInterval(pollAircraft, 30_000);
   } else if (mode === 'github') {
     pollGitHub();
     pollInterval = setInterval(pollGitHub, 60_000);
@@ -267,6 +293,8 @@ export function connectDataSource() {
     // Commodity polling is handled inside pollAPI, but start initial fetch
     pollCommodities();
     commodityPollInterval = setInterval(pollCommodities, 5 * 60_000);
+    pollAircraft();
+    aircraftPollInterval = setInterval(pollAircraft, 30_000);
   }
 }
 
@@ -274,5 +302,6 @@ export function disconnectDataSource() {
   if (reconnectTimeout) clearTimeout(reconnectTimeout);
   if (pollInterval) clearInterval(pollInterval);
   if (commodityPollInterval) clearInterval(commodityPollInterval);
+  if (aircraftPollInterval) clearInterval(aircraftPollInterval);
   ws?.close();
 }

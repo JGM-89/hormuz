@@ -61,7 +61,7 @@ export async function pushFile(path, content) {
   return result;
 }
 
-export async function pushSnapshot(vessels, transitHistory, historicalData, aisHealth = null, commodities = null) {
+export async function pushSnapshot(vessels, transitHistory, historicalData, aisHealth = null, commodities = null, aircraft = null) {
   if (!GITHUB_TOKEN || !GITHUB_REPO) {
     return; // silently skip if not configured
   }
@@ -83,6 +83,14 @@ export async function pushSnapshot(vessels, transitHistory, historicalData, aisH
       });
     }
 
+    // Push aircraft data so GitHub Pages site gets real aircraft positions
+    if (aircraft && aircraft.length > 0) {
+      await pushFile('live/aircraft.json', {
+        timestamp: Date.now(),
+        aircraft,
+      });
+    }
+
     // Historical data (content changes slowly)
     if (historicalData) {
       await pushFile('history/daily.json', {
@@ -91,7 +99,7 @@ export async function pushSnapshot(vessels, transitHistory, historicalData, aisH
       });
     }
 
-    console.log(`[GitHub] Pushed snapshot (${vessels.size} vessels, ${commodities?.length || 0} commodities, AIS: ${aisHealth?.status || '?'})`);
+    console.log(`[GitHub] Pushed snapshot (${vessels.size} vessels, ${commodities?.length || 0} commodities, ${aircraft?.length || 0} aircraft, AIS: ${aisHealth?.status || '?'})`);
   } catch (err) {
     console.error(`[GitHub] Push failed: ${err.message}`);
   }

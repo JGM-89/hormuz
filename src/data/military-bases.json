@@ -1,0 +1,45 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "name": "NSA Bahrain (US 5th Fleet)", "country": "US/BH", "type": "naval" },
+      "geometry": { "type": "Point", "coordinates": [50.6088, 26.2361] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Al Udeid Air Base", "country": "US/QA", "type": "air" },
+      "geometry": { "type": "Point", "coordinates": [51.3148, 25.1174] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Al Dhafra Air Base", "country": "US/AE", "type": "air" },
+      "geometry": { "type": "Point", "coordinates": [54.5475, 24.2481] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Fujairah Naval Base", "country": "AE", "type": "naval" },
+      "geometry": { "type": "Point", "coordinates": [56.3609, 25.1204] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Bandar Abbas Naval Base", "country": "IR", "type": "naval" },
+      "geometry": { "type": "Point", "coordinates": [56.2808, 27.1865] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Jask Naval Base", "country": "IR", "type": "naval" },
+      "geometry": { "type": "Point", "coordinates": [57.7731, 25.6476] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "HMS Juffair (UK NSF)", "country": "UK/BH", "type": "naval" },
+      "geometry": { "type": "Point", "coordinates": [50.6050, 26.2280] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Duqm Naval Facility", "country": "UK/OM", "type": "naval" },
+      "geometry": { "type": "Point", "coordinates": [57.7164, 19.6735] }
+    }
+  ]
+}

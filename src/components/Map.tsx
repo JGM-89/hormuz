@@ -9,11 +9,15 @@ import type { Vessel } from '../types';
 // Free dark tile style (no API key needed)
 const DARK_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
 
+// Shared map ref so LayerToggle can control layers
+export const mapInstanceRef: { current: maplibregl.Map | null } = { current: null };
+
 export default function Map() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef(new globalThis.Map<string, maplibregl.Marker>());
   const vessels = useStore((s) => s.vessels);
+  const aircraft = useStore((s) => s.aircraft);
   const setSelectedVessel = useStore((s) => s.setSelectedVessel);
 
   const handleVesselClick = useCallback(
@@ -45,7 +49,22 @@ export default function Map() {
     );
 
     map.on('load', () => {
-      // Add TSS lanes
+      // ─── Satellite raster source (hidden by default, added first so it's below everything) ───
+      map.addSource('satellite-tiles', {
+        type: 'raster',
+        tiles: ['https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2021_3857/default/GoogleMapsCompatible/{z}/{y}/{x}.jpg'],
+        tileSize: 256,
+        attribution: '&copy; EOX / Sentinel-2',
+      });
+      map.addLayer({
+        id: 'satellite',
+        type: 'raster',
+        source: 'satellite-tiles',
+        layout: { visibility: 'none' },
+        paint: { 'raster-opacity': 0.7 },
+      });
+
+      // ─── TSS lanes ───
       map.addSource('tss-inbound', {
         type: 'geojson',
         data: {
@@ -115,6 +134,178 @@ export default function Map() {
           'line-dasharray': [2, 2],
         },
       });
+
+      // ─── Shipping lanes (hidden by default, populated lazily) ───
+      map.addSource('shipping-lanes', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+      });
+      map.addLayer({
+        id: 'shipping-lanes-major',
+        type: 'line',
+        source: 'shipping-lanes',
+        filter: ['==', ['get', 'type'], 'major'],
+        layout: { visibility: 'none' },
+        paint: {
+          'line-color': '#3b82f6',
+          'line-width': 2.5,
+          'line-opacity': 0.5,
+        },
+      });
+      map.addLayer({
+        id: 'shipping-lanes-secondary',
+        type: 'line',
+        source: 'shipping-lanes',
+        filter: ['==', ['get', 'type'], 'secondary'],
+        layout: { visibility: 'none' },
+        paint: {
+          'line-color': '#3b82f6',
+          'line-width': 1.5,
+          'line-opacity': 0.35,
+          'line-dasharray': [6, 3],
+        },
+      });
+
+      // ─── EEZ boundaries (hidden by default, populated lazily) ───
+      map.addSource('eez', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+      });
+      map.addLayer({
+        id: 'eez-lines',
+        type: 'line',
+        source: 'eez',
+        layout: { visibility: 'none' },
+        paint: {
+          'line-color': '#a855f7',
+          'line-width': 1.5,
+          'line-opacity': 0.4,
+          'line-dasharray': [4, 4],
+        },
+      });
+
+      // ─── Military bases (hidden by default, populated lazily) ───
+      map.addSource('military-bases', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+      });
+      map.addLayer({
+        id: 'military-bases-circles',
+        type: 'circle',
+        source: 'military-bases',
+        layout: { visibility: 'none' },
+        paint: {
+          'circle-radius': 6,
+          'circle-color': [
+            'match', ['get', 'country'],
+            'IR', '#ef4444',
+            'US/BH', '#3b82f6',
+            'US/QA', '#3b82f6',
+            'US/AE', '#3b82f6',
+            'UK/BH', '#22d3ee',
+            'UK/OM', '#22d3ee',
+            'AE', '#10b981',
+            '#f59e0b',
+          ],
+          'circle-stroke-width': 2,
+          'circle-stroke-color': '#0a1628',
+          'circle-opacity': 0.85,
+        },
+      });
+      map.addLayer({
+        id: 'military-bases-labels',
+        type: 'symbol',
+        source: 'military-bases',
+        layout: {
+          visibility: 'none',
+          'text-field': ['get', 'name'],
+          'text-size': 10,
+          'text-offset': [0, 1.5],
+          'text-anchor': 'top',
+          'text-font': ['Open Sans Regular'],
+        },
+        paint: {
+          'text-color': '#e2e8f0',
+          'text-halo-color': '#0a1628',
+          'text-halo-width': 1,
+        },
+      });
+
+      // ─── Aircraft layer (hidden by default) ───
+      // Create plane icon (triangle pointing up, rotated by heading)
+      const size = 24;
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d')!;
+      // Draw a simple plane shape
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath();
+      ctx.moveTo(size / 2, 2);           // nose
+      ctx.lineTo(size - 2, size - 4);    // right wing tip
+      ctx.lineTo(size / 2, size - 8);    // tail center
+      ctx.lineTo(2, size - 4);           // left wing tip
+      ctx.closePath();
+      ctx.fill();
+      // Fuselage line
+      ctx.strokeStyle = '#fbbf24';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(size / 2, size - 8);
+      ctx.lineTo(size / 2, size - 2);
+      ctx.stroke();
+
+      const imageData = ctx.getImageData(0, 0, size, size);
+      map.addImage('plane-icon', imageData, { sdf: false });
+
+      map.addSource('aircraft', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+      });
+      map.addLayer({
+        id: 'aircraft-icons',
+        type: 'symbol',
+        source: 'aircraft',
+        layout: {
+          visibility: 'none',
+          'icon-image': 'plane-icon',
+          'icon-size': 0.8,
+          'icon-rotate': ['get', 'heading'],
+          'icon-rotation-alignment': 'map',
+          'icon-allow-overlap': true,
+        },
+      });
+
+      // Aircraft hover popup
+      const popup = new maplibregl.Popup({
+        closeButton: false,
+        closeOnClick: false,
+        offset: 15,
+        className: 'vessel-popup',
+      });
+
+      map.on('mouseenter', 'aircraft-icons', (e) => {
+        map.getCanvas().style.cursor = 'pointer';
+        const f = e.features?.[0];
+        if (!f) return;
+        const p = f.properties!;
+        const coords = (f.geometry as GeoJSON.Point).coordinates as [number, number];
+        const altFt = Math.round((p.altitude || 0) * 3.281);
+        const spdKn = Math.round((p.velocity || 0) * 1.944);
+        popup.setLngLat(coords).setHTML(`
+          <div style="font-family: monospace; font-size: 11px; color: #e2e8f0;">
+            <strong>${p.callsign || p.icao24}</strong><br/>
+            ${altFt.toLocaleString()} ft · ${spdKn} kn<br/>
+            <span style="color: #94a3b8;">${p.originCountry}</span>
+          </div>
+        `).addTo(map);
+      });
+
+      map.on('mouseleave', 'aircraft-icons', () => {
+        map.getCanvas().style.cursor = '';
+        popup.remove();
+      });
+
       // Vessel trail source and layers
       map.addSource('vessel-trail', {
         type: 'geojson',
@@ -142,12 +333,44 @@ export default function Map() {
     });
 
     mapRef.current = map;
+    mapInstanceRef.current = map;
 
     return () => {
       map.remove();
       mapRef.current = null;
+      mapInstanceRef.current = null;
     };
   }, []);
+
+  // Update aircraft GeoJSON when data changes
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded()) return;
+
+    const source = map.getSource('aircraft') as maplibregl.GeoJSONSource | undefined;
+    if (!source) return;
+
+    const features: GeoJSON.Feature[] = [];
+    aircraft.forEach((a) => {
+      features.push({
+        type: 'Feature',
+        properties: {
+          icao24: a.icao24,
+          callsign: a.callsign?.trim() || a.icao24,
+          originCountry: a.originCountry,
+          altitude: a.altitude,
+          velocity: a.velocity,
+          heading: a.heading || 0,
+        },
+        geometry: {
+          type: 'Point',
+          coordinates: [a.lon, a.lat],
+        },
+      });
+    });
+
+    source.setData({ type: 'FeatureCollection', features });
+  }, [aircraft]);
 
   // Update trail when vessel selected
   const selectedVessel = useStore((s) => s.selectedVessel);
