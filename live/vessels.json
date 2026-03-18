@@ -1,1 +1,1 @@
-{"timestamp":1773825083504,"vessels":{},"recentTransits":[],"aisHealth":{"status":"outage","connected":true,"lastMessage":1773765989142,"timeSinceLastMsg":59094362,"reconnects":505,"serverUptime":63561}}
+{"timestamp":1773825143511,"vessels":{},"recentTransits":[],"aisHealth":{"status":"waiting","connected":true,"lastMessage":1773765989142,"timeSinceLastMsg":59154369,"reconnects":506,"serverUptime":63621}}
