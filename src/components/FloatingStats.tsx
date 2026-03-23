@@ -3,17 +3,33 @@ import { useStore } from '../store';
 import { getCongestionLevel } from '../utils/geo';
 import { Activity, Clock } from 'lucide-react';
 
+function formatAge(ts: number): string {
+  if (!ts) return '—';
+  const seconds = Math.floor((Date.now() - ts) / 1000);
+  if (seconds < 10) return 'just now';
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  return `${hours}h ago`;
+}
+
 export default function FloatingStats() {
   const stats = useStore((s) => s.stats);
   const aisHealth = useStore((s) => s.aisHealth);
   const connected = useStore((s) => s.connected);
+  const snapshotTimestamp = useStore((s) => s.snapshotTimestamp);
   const congestion = getCongestionLevel(stats.totalVessels);
   const [utc, setUtc] = useState(() => new Date().toISOString().slice(11, 19));
+  const [age, setAge] = useState(() => formatAge(snapshotTimestamp));
 
   useEffect(() => {
-    const id = setInterval(() => setUtc(new Date().toISOString().slice(11, 19)), 1000);
+    const id = setInterval(() => {
+      setUtc(new Date().toISOString().slice(11, 19));
+      setAge(formatAge(snapshotTimestamp));
+    }, 1000);
     return () => clearInterval(id);
-  }, []);
+  }, [snapshotTimestamp]);
 
   const statusConfig: Record<string, { ledClass: string; textColor: string; label: string }> = {
     live: { ledClass: 'led-live', textColor: 'text-status-nominal', label: 'AIS LIVE' },
@@ -91,6 +107,19 @@ export default function FloatingStats() {
           {congestion.label}
         </span>
       </div>
+
+      {snapshotTimestamp > 0 && (
+        <>
+          <Divider />
+          <div
+            className="flex items-center gap-1"
+            title={`Data snapshot: ${new Date(snapshotTimestamp).toISOString()}`}
+          >
+            <span className="text-[11px] text-text-dim uppercase tracking-widest">Updated</span>
+            <span className="text-[11px] font-data text-text-dim">{age}</span>
+          </div>
+        </>
+      )}
     </div>
   );
 }

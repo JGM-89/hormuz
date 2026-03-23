@@ -36,6 +36,7 @@ interface AppState {
   connected: boolean;
   dataMode: 'github' | 'api' | 'ws';
   lastFetch: number;
+  snapshotTimestamp: number;
   setSelectedVessel: (mmsi: string | null) => void;
   setSelectedAircraft: (icao24: string | null) => void;
   handleMessage: (msg: WSMessage) => void;
@@ -48,7 +49,7 @@ interface AppState {
   setWeather: (data: WeatherState) => void;
   setAircraft: (data: Aircraft[]) => void;
   setExpandedCommodity: (symbol: string | null) => void;
-  setLiveData: (vessels: Record<string, RawVessel>, stats: Partial<Stats> | undefined, transits: Transit[], aisHealth?: AisHealth | null) => void;
+  setLiveData: (vessels: Record<string, RawVessel>, stats: Partial<Stats> | undefined, transits: Transit[], aisHealth?: AisHealth | null, snapshotTimestamp?: number) => void;
 }
 
 const defaultStats: Stats = {
@@ -104,6 +105,7 @@ export const useStore = create<AppState>((set) => ({
   connected: false,
   dataMode: getDataMode(),
   lastFetch: 0,
+  snapshotTimestamp: 0,
 
   setSelectedVessel: (mmsi) => set({ selectedVessel: mmsi, selectedAircraft: null }),
   setSelectedAircraft: (icao24) => set({ selectedAircraft: icao24, selectedVessel: null }),
@@ -117,7 +119,7 @@ export const useStore = create<AppState>((set) => ({
   setWeather: (data) => set({ weather: data }),
   setExpandedCommodity: (symbol) => set({ expandedCommodity: symbol }),
 
-  setLiveData: (vessels, stats, transits, aisHealth) => {
+  setLiveData: (vessels, stats, transits, aisHealth, snapshotTimestamp) => {
     const enriched = enrichVesselMap(vessels);
     return set({
       vessels: enriched,
@@ -125,6 +127,7 @@ export const useStore = create<AppState>((set) => ({
       transitHistory: transits,
       aisHealth: aisHealth ?? null,
       lastFetch: Date.now(),
+      snapshotTimestamp: snapshotTimestamp || Date.now(),
       connected: true,
     });
   },
@@ -199,7 +202,7 @@ async function fetchJSON(url: string) {
 async function pollGitHub() {
   try {
     const live = await fetchJSON(`${GITHUB_RAW_BASE}/live/vessels.json`);
-    useStore.getState().setLiveData(live.vessels, live.stats, live.recentTransits || [], live.aisHealth);
+    useStore.getState().setLiveData(live.vessels, live.stats, live.recentTransits || [], live.aisHealth, live.timestamp);
 
     const state = useStore.getState();
     if (!state.historicalData || Date.now() - state.lastFetch > 60_000) {

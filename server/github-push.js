@@ -29,6 +29,10 @@ async function githubAPI(path, method = 'GET', body = null) {
   }
   if (!res.ok) {
     const text = await res.text();
+    if (res.status === 409) {
+      // SHA mismatch — clear cached SHA so next attempt re-fetches
+      delete lastSha[path];
+    }
     throw new Error(`GitHub API ${method} ${path}: ${res.status} ${text}`);
   }
   return res.json();
